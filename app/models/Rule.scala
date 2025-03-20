@@ -1,3 +1,6 @@
+// Ce fichier est obsolète car remplacé par providers.SocialMediaRule
+// La classe Rule a été migrée vers le package providers pour une meilleure cohérence
+
 package models
 
 import org.joda.time.DateTime

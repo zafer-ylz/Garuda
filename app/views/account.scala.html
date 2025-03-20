@@ -1,6 +1,7 @@
-@(accounts: Seq[Account], form: Form[Account], postUrl: Call)(implicit request: MessagesRequestHeader)
+@(accounts: Seq[SocialAccount], form: Form[models.AccountForm.AccountData], postUrl: Call)(implicit request: MessagesRequestHeader)
 
-@import models.Account
+@import models.SocialAccount
+@import providers.ProviderType
 
 @main("Accounts") {
 
@@ -12,10 +13,19 @@
             <table>
                 <tr>
                     <td>@account.name</td>
-                    <td>(@account.accountType.name)</td>
+                    <td>(@account.providerType.name)</td>
                 </tr>
                 <tr>
-                    <td colspan="2">Bearer Token: @account.bearerToken</td>
+                    <td colspan="2">
+                        @account.providerType match {
+                            case ProviderType.Twitter => {
+                                <span>Bearer Token: @account.getBearerToken</span>
+                            }
+                            case ProviderType.Bluesky => {
+                                <span>Identifier: @account.getIdentifier</span>
+                            }
+                        }
+                    </td>
                 </tr>
                 <tr>
                     <td>
@@ -25,16 +35,16 @@
                         }
                     </td>
                     <td>
-                        @if(account.currentActiveCollect.isEmpty){
+                        @if(account.getActiveCollect.isEmpty){
                             <a href="#update_account_form_@{account.name}" id="update_account_form_@{account.name}_pop">Update account</a>
                         }else{
-                            In use for the collect @{account.currentActiveCollect.get.collect.name}.
+                            In use for the collect @{account.getActiveCollect.get.name}.
                         }
                     </td>
                 </tr>
             </table>
 
-            @if(account.currentActiveCollect.isEmpty){
+            @if(account.getActiveCollect.isEmpty){
                 <!-- popup update account -->
                 <a href="#x" class="overlay" id="update_account_form_@{account.name}"></a>
                 <div class="popup">
@@ -43,8 +53,14 @@
                         @helper.form(controllers.routes.AccountController.updateAccount(account.name)) {
                             @helper.CSRF.formField
                             <input id="Name" name="Name" type="hidden" value="@{account.name}">
-                            @helper.select(form("Account type").copy(value = Some(account.accountType.name)), Seq(("Essential", "Essential"), ("Elevated", "Elevated"), ("Academic", "Academic")))
-                            @helper.inputText(form("Bearer Token").copy(value = Some(account.bearerToken)))
+                            @helper.select(form("Provider Type"), ProviderType.values.map(p => (p.name, p.name)))
+                            <div id="twitter-fields">
+                                @helper.inputText(form("Bearer Token").copy(value = Some(account.getBearerToken)))
+                            </div>
+                            <div id="bluesky-fields" style="display: none;">
+                                @helper.inputText(form("Identifier").copy(value = Some(account.getIdentifier)))
+                                @helper.inputPassword(form("Password"))
+                            </div>
                             <input type="submit" value="Update account">
                         }
                         <a class="close" href="#close"></a>
@@ -71,11 +87,36 @@
         @helper.CSRF.formField
 
         @helper.inputText(form("Name"))
-
-        @helper.select(form("Account type"), Seq(("Essential", "Essential"), ("Elevated", "Elevated"), ("Academic", "Academic")))
-
-        @helper.inputText(form("Bearer Token"))
+        
+        @helper.select(form("Provider Type"), ProviderType.values.map(p => (p.name, p.name)))
+        
+        <div id="twitter-fields">
+            @helper.inputText(form("Bearer Token"))
+        </div>
+        
+        <div id="bluesky-fields" style="display: none;">
+            @helper.inputText(form("Identifier"))
+            @helper.inputPassword(form("Password"))
+        </div>
 
         <button>Add account</button>
     }
+
+    <script>
+        $(document).ready(function() {
+            function updateFields() {
+                var providerType = $("#Provider_Type").val();
+                if (providerType === "Twitter") {
+                    $("#twitter-fields").show();
+                    $("#bluesky-fields").hide();
+                } else if (providerType === "Bluesky") {
+                    $("#twitter-fields").hide();
+                    $("#bluesky-fields").show();
+                }
+            }
+            
+            $("#Provider_Type").change(updateFields);
+            updateFields();
+        });
+    </script>
 }

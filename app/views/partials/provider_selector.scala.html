@@ -1,0 +1,32 @@
+@(providers: Seq[ProviderType], selectedProvider: Option[ProviderType] = None)
+
+<div class="provider-selector mb-4">
+    <label for="provider-select" class="form-label">Sélectionner le provider</label>
+    <select class="form-select" id="provider-select" name="providerType">
+        <option value="">Choisir un provider...</option>
+        @for(provider <- providers) {
+            <option value="@provider" @if(selectedProvider.contains(provider)){selected}>
+                @provider match {
+                    case ProviderType.Twitter => {Twitter}
+                    case ProviderType.Bluesky => {Bluesky}
+                    case _ => {Autre}
+                }
+            </option>
+        }
+    </select>
+</div>
+
+<script>
+    document.getElementById('provider-select').addEventListener('change', function() {
+        const selectedProvider = this.value;
+        // Masquer tous les formulaires spécifiques aux providers
+        document.querySelectorAll('.provider-specific-form').forEach(form => {
+            form.style.display = 'none';
+        });
+        // Afficher le formulaire correspondant au provider sélectionné
+        const selectedForm = document.getElementById(selectedProvider + '-form');
+        if (selectedForm) {
+            selectedForm.style.display = 'block';
+        }
+    });
+</script> 

@@ -1,95 +1,121 @@
 package controllers
 
-import dao.{AccountDao, CollectDao}
-import javax.inject.{Inject, Singleton}
-import models.Account
-import models.AccountForm._
-import play.api.data._
+import javax.inject._
 import play.api.mvc._
-
-import scala.concurrent.{ExecutionContext, Future}
+import play.api.data._
+import play.api.data.Forms._
+import models.SocialAccount
+import models.twitter.TwitterAccountForm
+import models.bluesky.BlueskyAccountForm
+import services.AccountService
+import providers.ProviderType
 
 @Singleton
-class AccountController @Inject()(accountDao: AccountDao, collectDao: CollectDao, cc: MessagesControllerComponents)
-								 (implicit executionContext: ExecutionContext) extends MessagesAbstractController(cc) {
+class AccountController @Inject()(
+	val controllerComponents: ControllerComponents,
+	accountService: AccountService
+) extends BaseController {
 	
-	private val postUrl = routes.AccountController.createAccount
+	// Formulaires
+	private val twitterForm = Form(
+		mapping(
+			"name" -> text,
+			"identifier" -> text,
+			"password" -> text,
+			"apiKey" -> text,
+			"apiSecret" -> text,
+			"accessToken" -> text,
+			"accessTokenSecret" -> text
+		)(TwitterAccountForm.apply)(TwitterAccountForm.unapply)
+	)
 	
-	def listAccounts: Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		// Pass an unpopulated form to the template
-		accountDao.all().map(accounts => Ok(views.html.account(accounts, form, postUrl)))
+	private val blueskyForm = Form(
+		mapping(
+			"name" -> text,
+			"identifier" -> text,
+			"password" -> text
+		)(BlueskyAccountForm.apply)(BlueskyAccountForm.unapply)
+	)
+	
+	def index() = Action { implicit request: Request[AnyContent] =>
+		val accounts = accountService.getAllAccounts
+		Ok(views.html.accounts.index(accounts, twitterForm, blueskyForm))
 	}
 	
-	// This will be the action that handles our form post
-	def createAccount: Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		
-		val errorFunction = { formWithErrors: Form[Account] =>
-			// This is the bad case, where the form had validation errors.
-			// Let's show the user the form again, with the errors highlighted.
-			// Note how we pass the form with errors to the template.
-			accountDao.all().map(accounts => BadRequest(views.html.account(accounts, formWithErrors, postUrl)))
-		}
-		
-		val successFunction = { account: Account =>
-			// This is the good case, where the form was successfully parsed as an Account object.
-			// Check if name is unique
-			accountDao.count(account.name).map(nb => {
-				if (nb == 0) {
-					// Can add account
-					accountDao.insert(account).map(_ =>
-						Redirect(routes.AccountController.listAccounts).flashing("success" -> "Account added!")
-					)
-				} else {
-					// Name is not unique, return error
-					accountDao.all().map(accounts =>
-						BadRequest(views.html.account(accounts, form.fill(account)
-							.withError("Name", "Account name already exists"), postUrl))
-							.flashing("error" -> "Account name already exists")
-					)
+	def createTwitterAccount() = Action { implicit request: Request[AnyContent] =>
+		twitterForm.bindFromRequest.fold(
+			formWithErrors => {
+				val accounts = accountService.getAllAccounts
+				BadRequest(views.html.accounts.index(accounts, formWithErrors, blueskyForm))
+			},
+			accountData => {
+				accountService.createTwitterAccount(accountData)
+				Redirect(routes.AccountController.index()).flashing("success" -> "Compte Twitter créé avec succès")
+			}
+		)
+	}
+	
+	def createBlueskyAccount() = Action { implicit request: Request[AnyContent] =>
+		blueskyForm.bindFromRequest.fold(
+			formWithErrors => {
+				val accounts = accountService.getAllAccounts
+				BadRequest(views.html.accounts.index(accounts, twitterForm, formWithErrors))
+			},
+			accountData => {
+				accountService.createBlueskyAccount(accountData)
+				Redirect(routes.AccountController.index()).flashing("success" -> "Compte Bluesky créé avec succès")
+			}
+		)
+	}
+	
+	def edit(id: String) = Action { implicit request: Request[AnyContent] =>
+		accountService.getAccount(id) match {
+			case Some(account) =>
+				account.providerType match {
+					case ProviderType.Twitter =>
+						val form = twitterForm.fill(TwitterAccountForm.fromAccount(account))
+						Ok(views.html.accounts.edit(account, form))
+					case ProviderType.Bluesky =>
+						val form = blueskyForm.fill(BlueskyAccountForm.fromAccount(account))
+						Ok(views.html.accounts.edit(account, form))
+					case _ =>
+						NotFound("Provider non supporté")
 				}
-			}).flatten
+			case None =>
+				NotFound("Compte non trouvé")
 		}
-		
-		val formValidationResult = form.bindFromRequest()
-		formValidationResult.fold(errorFunction, successFunction)
 	}
 	
-	// This will be the action that handles our form post
-	def updateAccount(accountName: String): Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		
-		val errorFunction = { formWithErrors: Form[Account] =>
-			// This is the bad case, where the form had validation errors.
-			// Let's show the user the form again, with the errors highlighted.
-			// Note how we pass the form with errors to the template.
-			val flash = formWithErrors.errors.foldLeft("")((s, e) => s"$s${e.key}: ${e.message}\n")
-			Future(Redirect(routes.AccountController.listAccounts).flashing("error" -> flash))
+	def update(id: String) = Action { implicit request: Request[AnyContent] =>
+		accountService.getAccount(id) match {
+			case Some(account) =>
+				account.providerType match {
+					case ProviderType.Twitter =>
+						twitterForm.bindFromRequest.fold(
+							formWithErrors => BadRequest(views.html.accounts.edit(account, formWithErrors)),
+							accountData => {
+								accountService.updateTwitterAccount(id, accountData)
+								Redirect(routes.AccountController.index()).flashing("success" -> "Compte Twitter mis à jour avec succès")
+							}
+						)
+					case ProviderType.Bluesky =>
+						blueskyForm.bindFromRequest.fold(
+							formWithErrors => BadRequest(views.html.accounts.edit(account, formWithErrors)),
+							accountData => {
+								accountService.updateBlueskyAccount(id, accountData)
+								Redirect(routes.AccountController.index()).flashing("success" -> "Compte Bluesky mis à jour avec succès")
+							}
+						)
+					case _ =>
+						NotFound("Provider non supporté")
+				}
+			case None =>
+				NotFound("Compte non trouvé")
 		}
-		
-		val successFunction = { account: Account =>
-			// This is the good case, where the form was successfully parsed as an Account object.
-			// Check if name is unique
-			accountDao.update(accountName, account).map(_ =>
-				Redirect(routes.AccountController.listAccounts).flashing("success" -> "Account updated!")
-			)
-		}
-		
-		val formValidationResult = form.bindFromRequest()
-		formValidationResult.fold(errorFunction, successFunction)
 	}
 	
-	def removeAccount(accountName: String): Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		// Pass an unpopulated form to the template
-		collectDao.countByAccountName(accountName).map {
-			case 0 => {
-				accountDao.delete(accountName)
-				Redirect(routes.AccountController.listAccounts).flashing("info" -> s"Account $accountName removed.")
-			}
-			case 1 => {
-				Redirect(routes.AccountController.listAccounts).flashing("error" -> s"Cannot delete account, it is used in 1 collect.")
-			}
-			case nb: Int => {
-				Redirect(routes.AccountController.listAccounts).flashing("error" -> s"Cannot delete account, it is used in $nb collects.")
-			}
-		}
+	def delete(id: String) = Action { implicit request: Request[AnyContent] =>
+		accountService.deleteAccount(id)
+		Redirect(routes.AccountController.index()).flashing("success" -> "Compte supprimé avec succès")
 	}
 }

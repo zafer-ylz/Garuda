@@ -3,25 +3,29 @@ package modules.exporter.postgresql
 import java.sql._
 import java.util.Properties
 
+import models.SocialMediaMessage
 import models.tweet.{Annotation, Cashtag, Hashtag, Media, Place, Tweet, Url, User, UserMention}
 import play.api.Logging
+import providers.ProviderType
 
-class PostgresDao(val postgresConfiguration: PostgresConfiguration) extends Logging {
+class PostgresDao(val config: PostgresConfiguration) extends Logging {
 	
 	case class MultiInsertions(stmt: Statement)
 	
 	Class.forName("org.postgresql.Driver")
-	private val url: String = s"jdbc:postgresql://${postgresConfiguration.host}:${postgresConfiguration.port}/${postgresConfiguration.base}"
+	private val url: String = s"jdbc:postgresql://${config.host}:${config.port}/${config.base}"
 	private val props: Properties = new Properties()
-	props.setProperty("user", postgresConfiguration.user)
-	props.setProperty("password", postgresConfiguration.password)
+	props.setProperty("user", config.user)
+	props.setProperty("password", config.password)
 	private val conn: Connection = DriverManager.getConnection(url, props)
-	private val schema: String = postgresConfiguration.schema
+	private val schema: String = config.schema
 	
 	private val TWEET_TABLE: String = "tweet"
 	private val USER_TABLE: String = "user"
 	private val WITHHELD_IN_COUNTRY_TABLE: String = "withheld_in_country"
 	private val PLACE_TABLE: String = "place"
+	private val BLUESKY_POST_TABLE: String = "bluesky_post"
+	private val MESSAGE_TABLE: String = "social_message"
 	
 	private val REPLY_TABLE: String = "reply"
 	private val QUOTE_TABLE: String = "quote"
@@ -208,6 +212,32 @@ class PostgresDao(val postgresConfiguration: PostgresConfiguration) extends Logg
 				PRIMARY KEY(tweet_id, tag)
 			)"""
 		st.execute(tweetTagTable)
+		
+		// Tables pour Bluesky
+		val blueskyPostTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$BLUESKY_POST_TABLE(
+				id TEXT PRIMARY KEY,
+				uri TEXT,
+				cid TEXT,
+				author TEXT,
+				text TEXT,
+				reply_count INTEGER,
+				repost_count INTEGER,
+				like_count INTEGER,
+				created_at TIMESTAMP,
+				indexed_at TIMESTAMP,
+				FOREIGN KEY (id) REFERENCES $schema.$MESSAGE_TABLE(id)
+			)"""
+		st.execute(blueskyPostTable)
+		
+		val socialMessageTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$MESSAGE_TABLE(
+				id TEXT PRIMARY KEY,
+				provider_type TEXT NOT NULL,
+				content TEXT,
+				author_id TEXT,
+				created_at TIMESTAMP,
+				metadata JSONB
+			)"""
+		st.execute(socialMessageTable)
 		
 		st.close()
 	}
@@ -511,6 +541,51 @@ class PostgresDao(val postgresConfiguration: PostgresConfiguration) extends Logg
 		if (!conn.isClosed) {
 			logger.info("Shutdown PostgresDao connection.")
 			conn.close()
+		}
+	}
+	
+	/**
+	 * Insère un message Bluesky dans la base de données
+	 */
+	def insertBlueskyMessage(message: SocialMediaMessage): Unit = {
+		val multiInsertions = getMultiInsertions
+		try {
+			// Insertion dans la table commune des messages
+			val metadataJson = message.metadata.map {
+				case (k, v: String) => s""""$k":"${escapeSQL(v)}""""
+				case (k, v) => s""""$k":$v"""
+			}.mkString("{", ",", "}")
+			
+			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$MESSAGE_TABLE 
+				(id, provider_type, content, author_id, created_at, metadata) 
+				VALUES ('${message.id}', '${message.providerType}', '${escapeSQL(message.content)}', 
+					'${message.authorId}', '${message.createdAt}', '$metadataJson'::jsonb)
+				ON CONFLICT (id) DO NOTHING""")
+			
+			// Insertion dans la table spécifique Bluesky
+			val replyCount = message.metadata.getOrElse("replyCount", 0).asInstanceOf[Int]
+			val repostCount = message.metadata.getOrElse("repostCount", 0).asInstanceOf[Int]
+			val likeCount = message.metadata.getOrElse("likeCount", 0).asInstanceOf[Int]
+			
+			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$BLUESKY_POST_TABLE 
+				(id, uri, cid, author, text, reply_count, repost_count, like_count, created_at, indexed_at) 
+				VALUES ('${message.id}', 
+					${getStringOrNull(message.metadata.get("uri").map(_.toString))},
+					${getStringOrNull(message.metadata.get("cid").map(_.toString))},
+					'${message.authorId}',
+					'${escapeSQL(message.content)}',
+					$replyCount,
+					$repostCount,
+					$likeCount,
+					'${message.createdAt}',
+					'${message.createdAt}')
+				ON CONFLICT (id) DO NOTHING""")
+			
+			executeBatch(multiInsertions)
+		} catch {
+			case e: Exception => 
+				logger.error("Error inserting Bluesky message", e)
+				throw e
 		}
 	}
 }

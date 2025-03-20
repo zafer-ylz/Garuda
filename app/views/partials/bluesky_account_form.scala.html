@@ -1,0 +1,48 @@
+@(form: Form[BlueskyAccountForm])
+
+<div id="Bluesky-form" class="provider-specific-form" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Configuration du compte Bluesky</h5>
+        </div>
+        <div class="card-body">
+            @helper.form(action = routes.AccountController.createBlueskyAccount()) {
+                @helper.CSRF.formField
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("name"),
+                        'class -> "form-control",
+                        '_label -> "Nom du compte",
+                        'placeholder -> "Mon compte Bluesky"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("identifier"),
+                        'class -> "form-control",
+                        '_label -> "Identifiant Bluesky",
+                        'placeholder -> "handle.bsky.social"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputPassword(
+                        form("password"),
+                        'class -> "form-control",
+                        '_label -> "Mot de passe",
+                        'placeholder -> "••••••••"
+                    )
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Pour Bluesky, vous devez utiliser votre identifiant complet (handle.bsky.social) et votre mot de passe d'application.
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Créer le compte</button>
+            }
+        </div>
+    </div>
+</div> 

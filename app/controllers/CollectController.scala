@@ -2,25 +2,28 @@ package controllers
 
 import dao.{AccountDao, CollectDao, RuleDao, TemporaryRuleDao}
 import javax.inject.{Inject, Singleton}
-import models.{Collect, Rule, TemporaryRule}
+import models.{SocialCollect, SocialMediaRule}
 import models.CollectForm.{CollectData, form => collectForm}
 import models.TemporaryRuleForm.{TemporaryRuleData, form => ruleForm}
 import play.api.Configuration
 import play.api.data._
 import play.api.mvc._
 import play.filters.csrf._
+import services.ProviderManager
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 @Singleton
-class CollectController @Inject()(accountDao: AccountDao,
-								  collectDao: CollectDao,
-								  ruleDao: RuleDao,
-								  temporaryRulesDao: TemporaryRuleDao,
-								  cc: MessagesControllerComponents,
-								  conf: Configuration)
-								 (implicit executionContext: ExecutionContext) extends MessagesAbstractController(cc) {
+class CollectController @Inject()(
+	accountDao: AccountDao,
+	collectDao: CollectDao,
+	ruleDao: RuleDao,
+	temporaryRulesDao: TemporaryRuleDao,
+	providerManager: ProviderManager,
+	cc: MessagesControllerComponents,
+	conf: Configuration
+)(implicit executionContext: ExecutionContext) extends MessagesAbstractController(cc) {
 	
 	private val postUrlCreateCollect = routes.CollectController.createCollect
 	private def postUrlCreateRule(collectName: String) = routes.CollectController.createRule(collectName)
@@ -28,12 +31,9 @@ class CollectController @Inject()(accountDao: AccountDao,
 	private def postRemoveAccountRulesUrl(collectName: String) = routes.CollectController.removeAccountRules(collectName)
 	
 	def listCollects: Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		// Pass an unpopulated form to the template
-		collectDao.all().map {
-			case collects => {
-				accountDao.all().map {
-					case accounts => Ok(views.html.listCollects(collects, accounts, collectForm, postUrlCreateCollect))
-				}
+		collectDao.all().map { collects =>
+			accountDao.all().map { accounts =>
+				Ok(views.html.listCollects(collects, accounts, collectForm, postUrlCreateCollect))
 			}
 		}.flatten
 	}
@@ -45,7 +45,7 @@ class CollectController @Inject()(accountDao: AccountDao,
 	
 	def startCollect(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
 		val collect = updateRulesOfCollect(collectName)
-		val account = Await.result(accountDao.findByName(collect.account), Duration.Inf).get
+		val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 		
 		val collectStarted = account.startCollect(collect)
 		
@@ -62,7 +62,7 @@ class CollectController @Inject()(accountDao: AccountDao,
 	
 	def stopCollect(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
 		val collect = updateRulesOfCollect(collectName)
-		val account = Await.result(accountDao.findByName(collect.account), Duration.Inf).get
+		val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 		
 		val collectStopped = account.stopCollect(collect)
 		
@@ -83,11 +83,11 @@ class CollectController @Inject()(accountDao: AccountDao,
 			val rulesIds = request.body.asFormUrlEncoded.get("account_rules_ids").flatMap(_.split(",")).map(_.toLong)
 			
 			val collect = updateRulesOfCollect(collectName)
-			val account = Await.result(accountDao.findByName(collect.account), Duration.Inf).get
+			val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 			
-			account.removeRules(collectName, account.rules.getOrElse(List[Rule]()).filter(rule => rulesIds.contains(rule.id)))
+			account.removeRules(collectName, account.activeRules.filter(rule => rulesIds.contains(rule.id.getOrElse(-1L))))
 			
-			Redirect(routes.CollectController.seeCollect(collect.name)).flashing("info" -> "Account rules removes.")
+			Redirect(routes.CollectController.seeCollect(collect.name)).flashing("info" -> "Account rules removed.")
 		} else {
 			Redirect(routes.CollectController.seeCollect(collectName)).flashing("error" -> "No rule selected.")
 		}
@@ -97,20 +97,16 @@ class CollectController @Inject()(accountDao: AccountDao,
 		val activeIdRules = request.body.asFormUrlEncoded.get("active_ids").flatMap(_.split(","))
 		val nonActiveIdRules = request.body.asFormUrlEncoded.get("non_active_ids").flatMap(_.split(","))
 		
-		// a + id: collect active rules
-		// n + id: collect non-active rules
-		// t + id: collect temporary rules
 		val newActiveIdRules = activeIdRules.filter(_.startsWith("n")).map(_.substring(2).toLong)
 		val newActiveIdTemporaryRules = activeIdRules.filter(_.startsWith("t")).map(_.substring(2).toLong)
 		val newNonActiveIdRules = nonActiveIdRules.filter(_.startsWith("a")).map(_.substring(2).toLong)
 		
 		val collect = updateRulesOfCollect(collectName)
-		val account = Await.result(accountDao.findByName(collect.account), Duration.Inf).get
-		account.initRules(collect.name)
+		val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 		
-		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
+		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id.getOrElse(-1L)))
 		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List[TemporaryRule]()).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
-		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id))
+		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.getOrElse(-1L)))
 		
 		var flashData = Map[String, String]()
 		
@@ -120,8 +116,8 @@ class CollectController @Inject()(accountDao: AccountDao,
 			if (removeRulesResult.isRight) {
 				// Update with DAO
 				for (rule <- newNonActiveRules) {
-					rule.isActive = false
-					ruleDao.update(rule.id, rule)
+					rule.setActive(false)
+					ruleDao.update(rule.id.getOrElse(-1L), rule)
 				}
 			} else {
 				flashData += "error" -> removeRulesResult.left.getOrElse("")
@@ -130,18 +126,18 @@ class CollectController @Inject()(accountDao: AccountDao,
 		
 		// Make rules active
 		if (newActiveRules.nonEmpty || newActiveTemporaryRules.nonEmpty) {
-			val filteredNewActiveTemporaryRules = newActiveTemporaryRules.filter(rule => rule.content.length <= account.accountType.sizeOfRule)
-			val filteredNewActiveRules = newActiveRules.filter(rule => rule.content.length <= account.accountType.sizeOfRule)
+			val filteredNewActiveTemporaryRules = newActiveTemporaryRules.filter(rule => rule.content.length <= account.maxRuleLength)
+			val filteredNewActiveRules = newActiveRules.filter(rule => rule.content.length <= account.maxRuleLength)
 			
 			val addRulesResult = account.addRules(collectName, filteredNewActiveTemporaryRules, filteredNewActiveRules)
 			if (addRulesResult.isRight) {
 				collect.removeTemporaryRules(filteredNewActiveTemporaryRules)
 				collect.removeRules(filteredNewActiveRules)
-				collect.addRules(addRulesResult.getOrElse(Seq[Rule]()))
+				collect.addRules(addRulesResult.getOrElse(Seq[SocialMediaRule]()))
 				// Update with DAO
 				temporaryRulesDao.batchDelete(filteredNewActiveTemporaryRules.map(_.id.get))
-				ruleDao.batchDelete(filteredNewActiveRules.map(_.id))
-				ruleDao.batchInsert(addRulesResult.getOrElse(Seq[Rule]()))
+				ruleDao.batchDelete(filteredNewActiveRules.map(_.id.getOrElse(-1L)))
+				ruleDao.batchInsert(addRulesResult.getOrElse(Seq[SocialMediaRule]()))
 				// Inform user that some rules have not been added due to size incompatibility
 				if (filteredNewActiveRules.size < newActiveRules.size
 					|| filteredNewActiveTemporaryRules.size < newActiveTemporaryRules.size) {
@@ -152,100 +148,36 @@ class CollectController @Inject()(accountDao: AccountDao,
 			}
 		}
 		
-		//displayCollect(collect, flash = new Flash(flashData))
 		Redirect(routes.CollectController.seeCollect(collect.name)).flashing(new Flash(flashData))
 	}
 	
-	// This will be the action that handles our form post
-	def createRule(collectName: String): Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		
-		val errorFunction = { formWithErrors: Form[TemporaryRuleData] =>
-			// This is the bad case, where the form had validation errors.
-			// Let's show the user the form again, with the errors highlighted.
-			// Note how we pass the form with errors to the template.
-			val collect = updateRulesOfCollect(collectName)
-			displayCollect(collect, formWithErrors)
-		}
-		
-		val successFunction = { data: TemporaryRuleData =>
-			// This is the good case, where the form was successfully parsed as a Collect object.
-			val newTemporaryRule = Await.result(temporaryRulesDao.insert(TemporaryRule(None, data.tag, data.content, collectName)), Duration.Inf)
-			val collect = updateRulesOfCollect(collectName)
-			// Add the rule to the collect
-			collect.addTemporaryRule(newTemporaryRule)
-			// Display the collect
-			displayCollect(collect)
-		}
-		
-		val formValidationResult = ruleForm.bindFromRequest()
-		formValidationResult.fold(errorFunction, successFunction)
-	}
-	
-	// This will be the action that handles our form post
-	def updateCollect(collectName: String): Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		
-		val errorFunction = { formWithErrors: Form[CollectData] =>
-			// This is the bad case, where the form had validation errors.
-			// Let's show the user the form again, with the errors highlighted.
-			// Note how we pass the form with errors to the template.
-			val flash = formWithErrors.errors.foldLeft("")((s, e) => s"$s${e.key}: ${e.message}\n")
-			Future(Redirect(routes.CollectController.seeCollect(collectName)).flashing("error" -> flash))
-		}
-		
-		val successFunction = { collectData: CollectData =>
-			// This is the good case, where the form was successfully parsed as a Collect object.
-			// Only the account can be updated
-			val collect = Await.result(collectDao.findByName(collectName), Duration.Inf).get
-			collect.account = collectData.account
-			collectDao.update(collectName, collect).map(_ =>
-				Redirect(routes.CollectController.seeCollect(collectName)).flashing("success" -> "Account updated!")
-			)
-			
-		}
-		
-		val formValidationResult = collectForm.bindFromRequest()
-		formValidationResult.fold(errorFunction, successFunction)
-	}
-	
-	// This will be the action that handles our form post
 	def createCollect: Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
-		
 		val errorFunction = { formWithErrors: Form[CollectData] =>
-			// This is the bad case, where the form had validation errors.
-			// Let's show the user the form again, with the errors highlighted.
-			// Note how we pass the form with errors to the template.
-			collectDao.all().map {
-				case collects => {
-					accountDao.all().map {
-						case accounts => BadRequest(views.html.listCollects(collects, accounts, formWithErrors, postUrlCreateCollect))
-					}
+			collectDao.all().map { collects =>
+				accountDao.all().map { accounts =>
+					BadRequest(views.html.listCollects(collects, accounts, formWithErrors, postUrlCreateCollect))
 				}
 			}.flatten
 		}
 		
 		val successFunction = { collectData: CollectData =>
-			// This is the good case, where the form was successfully parsed as a Collect object.
-			// Check if name is unique
-			collectDao.count(collectData.name).map(nb => {
+			collectDao.count(collectData.name).map { nb =>
 				if (nb == 0) {
-					// Can add collect
 					val directory = conf.get[String]("garuda.directory") + "/" + collectData.name
-					val collect = Collect(collectData.name, directory, collectData.account)
+					val account = Await.result(accountDao.findByName(collectData.account), Duration.Inf).get
+					val collect = providerManager.createCollect(collectData.name, directory, collectData.account, account.providerType)
 					collectDao.insert(collect).map(_ =>
 						Redirect(routes.CollectController.listCollects).flashing("success" -> "Collect created!")
 					)
 				} else {
-					// Name is not unique, return error
-					collectDao.all().map {
-						case collects => {
-							accountDao.all().map {
-								case accounts => BadRequest(views.html.listCollects(collects, accounts, collectForm.fill(collectData).withError("Name", "Collect name already exists"), postUrlCreateCollect))
-									.flashing("error" -> "Collect name already exists.")
-							}
+					collectDao.all().map { collects =>
+						accountDao.all().map { accounts =>
+							BadRequest(views.html.listCollects(collects, accounts, collectForm.fill(collectData).withError("Name", "Collect name already exists"), postUrlCreateCollect))
+								.flashing("error" -> "Collect name already exists.")
 						}
 					}.flatten
 				}
-			}).flatten
+			}.flatten
 		}
 		
 		val formValidationResult = collectForm.bindFromRequest()
@@ -267,30 +199,24 @@ class CollectController @Inject()(accountDao: AccountDao,
 		Redirect(routes.CollectController.listCollects).flashing(flash)
 	}
 	
-	/**
-	 * Update the rules of the given collect.
-	 *
-	 * @param collectName the name of the collect to update.
-	 * @return the updated collect.
-	 */
-	private def updateRulesOfCollect(collectName: String): Collect = {
+	private def updateRulesOfCollect(collectName: String): SocialCollect = {
 		val collect = Await.result(collectDao.findByName(collectName), Duration.Inf).get
 		// Populate rules if not already done
 		if (collect.rules.isEmpty) {
 			// Retrieve the rules of the collect
-			Await.result(ruleDao.findByCollectName(collectName).map {
-				case rules => temporaryRulesDao.findByCollectName(collectName).map {
-					case temporaryRules => collect.initRules(rules, temporaryRules)
+			Await.result(ruleDao.findByCollectName(collectName).map { rules =>
+				temporaryRulesDao.findByCollectName(collectName).map { temporaryRules =>
+					collect.initRules(rules, temporaryRules)
 				}
 			}, Duration.Inf)
 			// Update the rules of the account
-			Await.result(accountDao.findByName(collect.account).map {
+			Await.result(accountDao.findByName(collect.accountName).map {
 				case Some(account) => {
 					account.initRules(collect.name)
-					if (account.rules.isDefined) {
+					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
-						val activeIds = account.rules.get.map(_.id)
-						collect.rules.get.foreach(rule => rule.isActive = activeIds.contains(rule.id))
+						val activeIds = account.activeRules.map(_.id.getOrElse(-1L))
+						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id.getOrElse(-1L))))
 					}
 				}
 				case None => {}
@@ -299,21 +225,15 @@ class CollectController @Inject()(accountDao: AccountDao,
 		collect
 	}
 	
-	/**
-	 * Display the given collect.
-	 *
-	 */
-	private def displayCollect(collect: Collect, form: Form[TemporaryRuleData] = ruleForm, flash: Flash = new Flash())(implicit request: MessagesRequest[AnyContent]): Future[Result] = {
-		accountDao.all().map {
-			case accounts => {
-				accountDao.findByName(collect.account).map {
-					case Some(account) => {
-						val token = CSRF.getToken.get
-						Ok(views.html.seeCollect(collect, account, accounts, form, postUrlCreateRule(collect.name),
-							postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), token.value)).flashing(flash)
-					}
-					case None => InternalServerError(s"Account ${collect.account} not found.")
+	private def displayCollect(collect: SocialCollect, flash: Flash = new Flash(Map())): Future[Result] = {
+		accountDao.all().map { accounts =>
+			accountDao.findByName(collect.accountName).map {
+				case Some(account) => {
+					val token = CSRF.getToken.get
+					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
+						postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), token.value)).flashing(flash)
 				}
+				case None => InternalServerError(s"Account ${collect.accountName} not found.")
 			}
 		}.flatten
 	}

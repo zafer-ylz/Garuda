@@ -33,3 +33,9 @@ libraryDependencies += "com.twitter" % "twitter-api-java-sdk" % "2.0.3" exclude(
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.4"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-annotations" % "2.11.4"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson.core" % "2.11.4"
+
+// Bluesky API
+libraryDependencies ++= Seq(
+	"com.atproto" % "atproto-java" % "0.1.0",
+	"com.atproto" % "atproto-api" % "0.1.0"
+)

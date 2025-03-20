@@ -1,0 +1,79 @@
+@(form: Form[TwitterAccountForm])
+
+<div id="Twitter-form" class="provider-specific-form" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Configuration du compte Twitter</h5>
+        </div>
+        <div class="card-body">
+            @helper.form(action = routes.AccountController.createTwitterAccount()) {
+                @helper.CSRF.formField
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("name"),
+                        'class -> "form-control",
+                        '_label -> "Nom du compte",
+                        'placeholder -> "Mon compte Twitter"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("identifier"),
+                        'class -> "form-control",
+                        '_label -> "Identifiant Twitter",
+                        'placeholder -> "@username"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputPassword(
+                        form("password"),
+                        'class -> "form-control",
+                        '_label -> "Mot de passe",
+                        'placeholder -> "••••••••"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("apiKey"),
+                        'class -> "form-control",
+                        '_label -> "Clé API",
+                        'placeholder -> "Votre clé API Twitter"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("apiSecret"),
+                        'class -> "form-control",
+                        '_label -> "Secret API",
+                        'placeholder -> "Votre secret API Twitter"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("accessToken"),
+                        'class -> "form-control",
+                        '_label -> "Token d'accès",
+                        'placeholder -> "Votre token d'accès Twitter"
+                    )
+                </div>
+                
+                <div class="mb-3">
+                    @helper.inputText(
+                        form("accessTokenSecret"),
+                        'class -> "form-control",
+                        '_label -> "Secret du token d'accès",
+                        'placeholder -> "Votre secret de token d'accès Twitter"
+                    )
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Créer le compte</button>
+            }
+        </div>
+    </div>
+</div> 
