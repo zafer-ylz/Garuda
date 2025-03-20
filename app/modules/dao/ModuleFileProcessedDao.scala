@@ -7,28 +7,28 @@ import javax.inject.{Inject, Singleton}
 import modules.ModuleFileProcessed
 import org.joda.time.DateTime
 import play.api.db.slick.DatabaseConfigProvider
-import play.api.db.slick.HasDatabaseConfigProvider
 import slick.jdbc.JdbcProfile
+import dao.BaseDao
 
 @Singleton
 class ModuleFileProcessedDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit executionContext: ExecutionContext)
-	extends HasDatabaseConfigProvider[JdbcProfile] {
+	extends BaseDao[ModuleFileProcessed, (String, String, String)](dbConfigProvider) {
 	
 	import profile.api._
 	
-	private val mdoulesFilesProcessed = TableQuery[ModulesFilesProcessedTable]
+	override protected val tableQuery = TableQuery[ModulesFilesProcessedTable]
 	
-	/** Retrieve all the files processed */
-	def all(): Future[Seq[ModuleFileProcessed]] = db.run(mdoulesFilesProcessed.result)
+	override protected def filterById(id: (String, String, String)): Query[ModulesFilesProcessedTable, ModuleFileProcessed, Seq] =
+		tableQuery.filter(f => f.collect === id._1 && f.module === id._2 && f.file === id._3)
 	
 	/** Retrieve the files processed from the collect and the module names */
 	def findByCollect(collect: String, module: String): Future[Seq[ModuleFileProcessed]] = {
-		db.run(mdoulesFilesProcessed.filter(f => f.collect === collect &&f.module === module ).result)
+		db.run(tableQuery.filter(f => f.collect === collect && f.module === module).result)
 	}
 	
 	/** Insert a new file processed configuration */
 	def insert(moduleFileProcessed: ModuleFileProcessed): Future[Unit] = {
-		db.run(mdoulesFilesProcessed += moduleFileProcessed).map { _ => () }
+		db.run(tableQuery += moduleFileProcessed).map { _ => () }
 	}
 	
 	private class ModulesFilesProcessedTable(tag: Tag) extends Table[ModuleFileProcessed](tag, "module_file_processed") {

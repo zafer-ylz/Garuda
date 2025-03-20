@@ -8,47 +8,32 @@ import scala.concurrent.{ExecutionContext, Future}
 import javax.inject.{Inject, Singleton}
 import models.Rule
 import play.api.db.slick.DatabaseConfigProvider
-import play.api.db.slick.HasDatabaseConfigProvider
 import slick.jdbc.JdbcProfile
 
 @Singleton
 class RuleDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit executionContext: ExecutionContext)
-	extends HasDatabaseConfigProvider[JdbcProfile] {
+	extends BaseDao[Rule, Long](dbConfigProvider) {
 	
 	import profile.api._
 	
-	private val rules = TableQuery[RulesTable]
+	override protected val tableQuery = TableQuery[RulesTable]
 	
-	/** Retrieve all the rules */
-	def all(): Future[Seq[Rule]] = db.run(rules.result)
-	
-	/** Retrieve a rule from the id */
-	def findById(id: Long): Future[Option[Rule]] =
-		db.run(rules.filter(_.id === id).result.headOption)
+	override protected def filterById(id: Long): Query[RulesTable, Rule, Seq] =
+		tableQuery.filter(_.id === id)
 	
 	/** Retrieve rules from the collect name */
 	def findByCollectName(name: String): Future[Seq[Rule]] =
-		db.run(rules.filter(_.collect === name).result)
-	
-	/** Insert a new rule */
-	def insert(rule: Rule): Future[Unit] = db.run(rules += rule).map { _ => () }
-	
-	/** Insert new rules */
-	def batchInsert(newRules: Seq[Rule]): Future[Unit] = db.run(rules ++= newRules).map { _ => () }
+		db.run(tableQuery.filter(_.collect === name).result)
 	
 	/** Update a rule */
 	def update(id: Long, rule: Rule): Future[Unit] = {
 		val ruleToUpdate: Rule = rule.copy(id)
-		db.run(rules.filter(_.id === id).update(ruleToUpdate)).map(_ => ())
+		db.run(tableQuery.filter(_.id === id).update(ruleToUpdate)).map(_ => ())
 	}
-	
-	/** Delete a rule */
-	def delete(id: Long): Future[Unit] =
-		db.run(rules.filter(_.id === id).delete).map(_ => ())
 	
 	/** Delete a set of rules */
 	def batchDelete(ids: Seq[Long]): Future[Unit] = {
-		db.run(rules.filter(_.id.inSet(ids)).delete).map(_ => ())
+		db.run(tableQuery.filter(_.id.inSet(ids)).delete).map(_ => ())
 	}
 	
 	private class RulesTable(tag: Tag) extends Table[Rule](tag, "rule") {

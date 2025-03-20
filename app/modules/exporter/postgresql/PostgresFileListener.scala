@@ -1,44 +1,63 @@
 package modules.exporter.postgresql
 
-import modules.FileListener
-import modules.MessageAdapter
-import twitter.ObservableFile
+import java.io.File
+import java.nio.file._
+import models.SocialCollect
+import modules.Module
+import play.api.Logging
 
-/**
- * Écouteur de fichier pour PostgreSQL
- */
-class PostgresFileListener(override var observableFile: ObservableFile,
-                          val config: PostgresConfiguration,
-                          val module: PostgresModule) extends FileListener(observableFile) {
+class PostgresFileListener(
+  val observableFile: File,
+  val config: PostgresConfig,
+  val module: Module
+) extends Logging {
+  private val watchService = FileSystems.getDefault.newWatchService()
+  private val path = observableFile.toPath
+  private var isRunning = false
   
-  private var postgresInsertion: PostgresInsertion = _
+  // Enregistre le répertoire pour la surveillance
+  path.register(
+    watchService,
+    StandardWatchEventKinds.ENTRY_CREATE,
+    StandardWatchEventKinds.ENTRY_MODIFY
+  )
   
   /**
-   * Action à exécuter lorsqu'une ligne est ajoutée au fichier observé
+   * Démarre l'écoute des fichiers
    */
-  override def onEvent(line: String): Unit = {
-    // Utilise l'adaptateur de message pour convertir au format standardisé
-    MessageAdapter.convertMessage(line, module.collect.providerType).foreach { message =>
-      // Envoie le message au module pour traitement
-      module.processMessage(message)
-    }
+  def start(): Unit = {
+    isRunning = true
+    new Thread(() => {
+      while (isRunning) {
+        try {
+          val key = watchService.take()
+          for (event <- key.pollEvents().asScala) {
+            val kind = event.kind()
+            val path = event.context().asInstanceOf[Path]
+            
+            if (kind == StandardWatchEventKinds.ENTRY_CREATE || 
+                kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+              val file = this.path.resolve(path).toFile
+              if (!file.getAbsolutePath.endsWith("Errors")) {
+                val reader = new PostgresFileReader(file.getAbsolutePath, config)
+                reader.readFile()
+              }
+            }
+          }
+          key.reset()
+        } catch {
+          case e: Exception =>
+            logger.error("Error watching files", e)
+        }
+      }
+    }).start()
   }
   
   /**
-   * Action à exécuter lors du changement de fichier
+   * Arrête l'écoute des fichiers
    */
-  override def onFileChange(): Unit = {
-    if (postgresInsertion != null) {
-      postgresInsertion.insertBatch()
-      postgresInsertion.close()
-      postgresInsertion = null
-    }
-  }
-  
-  /**
-   * Action à exécuter à l'arrêt de l'écouteur
-   */
-  override def onStop(): Unit = {
-    onFileChange()
+  def stop(): Unit = {
+    isRunning = false
+    watchService.close()
   }
 }

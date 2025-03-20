@@ -1,6 +1,6 @@
 package models.twitter
 
-import models.{SocialAccount, SocialCollect, AccountType}
+import models.{BaseAccount, SocialCollect, AccountType}
 import providers.{ProviderType, SocialMediaRule, StreamingConnection}
 import providers.twitter.{TwitterProvider, TwitterRule}
 import twitter.TwitterConnection
@@ -15,7 +15,7 @@ case class TwitterAccount(
   accountType: AccountType,
   bearerToken: String,
   override val createdAt: DateTime = DateTime.now()
-) extends SocialAccount {
+) extends BaseAccount {
   private var rules: Option[Seq[SocialMediaRule]] = None
   private val twitterConnection = new TwitterConnection(this)
   private var currentActiveCollect: Option[TwitterStreamConnection] = None
@@ -38,7 +38,7 @@ case class TwitterAccount(
     currentActiveCollect.map(_.collect)
   }
   
-  def isCurrentActiveCollect(collect: SocialCollect): Boolean = {
+  override def isCurrentActiveCollect(collect: SocialCollect): Boolean = {
     currentActiveCollect.isDefined && currentActiveCollect.get.collect.name == collect.name
   }
   
@@ -72,29 +72,24 @@ case class TwitterAccount(
     if (rules.isEmpty) {
       retrieveActiveRules(collectName)
     } else {
-      // Les règles ont déjà été récupérées, ne pas contacter l'API Twitter
       Right(rules.get)
     }
   }
   
   override def retrieveActiveRules(collectName: String): Either[String, Seq[SocialMediaRule]] = {
-    // Les règles n'ont pas encore été récupérées
     val activeRules = twitterConnection.getAllRules(collectName)
     if (activeRules.isRight) {
-      // Les règles ont été correctement récupérées
       val convertedRules = activeRules.getOrElse(Seq.empty).map(rule => 
         TwitterRule(Some(rule.id), rule.tag, rule.content, collectName, rule.createdAt)
       )
       rules = Some(convertedRules)
       Right(rules.get)
     } else {
-      // Il y a eu un problème avec l'API Twitter
       Left(activeRules.left.getOrElse("Problem with Twitter API"))
     }
   }
   
   override def addRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]] = {
-    // Convertir en règles Twitter si nécessaire
     val twitterRules = rules.collect {
       case rule: TwitterRule => rule
       case rule => TwitterRule(rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt)
@@ -105,7 +100,6 @@ case class TwitterAccount(
     })
     
     if (addedRules.isRight) {
-      // Si les règles ont été correctement mises à jour, mettre à jour les règles du compte
       this.rules = Some(addedRules.getOrElse(Seq.empty).map(rule => 
         TwitterRule(Some(rule.id), rule.tag, rule.content, rule.collect, rule.createdAt)
       ))
@@ -117,7 +111,6 @@ case class TwitterAccount(
   }
   
   override def removeRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]] = {
-    // Convertir en règles Twitter si nécessaire
     val twitterRules = rules.collect {
       case rule: TwitterRule => rule
       case rule => TwitterRule(rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt)

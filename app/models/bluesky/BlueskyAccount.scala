@@ -1,6 +1,6 @@
 package models.bluesky
 
-import models.{SocialAccount, SocialCollect}
+import models.{BaseAccount, SocialCollect}
 import providers.{ProviderType, SocialMediaRule, StreamingConnection}
 import providers.bluesky.{BlueskyProvider, BlueskyRule}
 import org.joda.time.DateTime
@@ -14,7 +14,7 @@ case class BlueskyAccount(
   identifier: String,
   password: String,
   override val createdAt: DateTime = DateTime.now()
-) extends SocialAccount {
+) extends BaseAccount {
   private var rules: Option[Seq[SocialMediaRule]] = None
   private var currentActiveCollect: Option[BlueskyStreamConnection] = None
   
@@ -26,13 +26,12 @@ case class BlueskyAccount(
     currentActiveCollect.map(_.collect)
   }
   
-  def isCurrentActiveCollect(collect: SocialCollect): Boolean = {
+  override def isCurrentActiveCollect(collect: SocialCollect): Boolean = {
     currentActiveCollect.isDefined && currentActiveCollect.get.collect.name == collect.name
   }
   
   override def startCollect(collect: SocialCollect): Either[String, StreamingConnection] = {
     if (currentActiveCollect.isEmpty) {
-      // Obtenir le provider Bluesky
       ProviderRegistry.getProvider(ProviderType.Bluesky) match {
         case Some(provider) =>
           val blueskyProvider = provider.asInstanceOf[BlueskyProvider]
@@ -70,7 +69,6 @@ case class BlueskyAccount(
     if (rules.isEmpty) {
       retrieveActiveRules(collectName)
     } else {
-      // Les règles ont déjà été récupérées, ne pas contacter l'API Bluesky
       Right(rules.get)
     }
   }
@@ -159,23 +157,4 @@ class BlueskyStreamConnection(
   override def isActive: Boolean = {
     connection.isActive
   }
-}
-
-/**
- * Objet companion pour les formulaires
- */
-object BlueskyAccountForm {
-  /**
-   * Forms related
-   */
-  import play.api.data.Forms._
-  import play.api.data._
-  
-  val form: Form[BlueskyAccount] = Form(
-    mapping(
-      "Name" -> nonEmptyText,
-      "Identifier" -> nonEmptyText,
-      "Password" -> nonEmptyText
-    )(BlueskyAccount.apply(_, _, _, DateTime.now()))(account => Some((account.name, account.identifier, account.password)))
-  )
 } 

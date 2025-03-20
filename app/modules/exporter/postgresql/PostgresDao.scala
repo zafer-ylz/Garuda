@@ -8,16 +8,12 @@ import models.tweet.{Annotation, Cashtag, Hashtag, Media, Place, Tweet, Url, Use
 import play.api.Logging
 import providers.ProviderType
 
-class PostgresDao(val config: PostgresConfiguration) extends Logging {
+class PostgresDao(val config: PostgresConfig) extends Logging {
 	
 	case class MultiInsertions(stmt: Statement)
 	
 	Class.forName("org.postgresql.Driver")
-	private val url: String = s"jdbc:postgresql://${config.host}:${config.port}/${config.base}"
-	private val props: Properties = new Properties()
-	props.setProperty("user", config.user)
-	props.setProperty("password", config.password)
-	private val conn: Connection = DriverManager.getConnection(url, props)
+	private val conn: Connection = DriverManager.getConnection(config.getUrl, config.getProperties)
 	private val schema: String = config.schema
 	
 	private val TWEET_TABLE: String = "tweet"
@@ -47,197 +43,28 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 	 */
 	def setupCollect(): Unit = {
 		val st: Statement = conn.createStatement()
-		st.execute(s"CREATE SCHEMA IF NOT EXISTS $schema")
+		st.execute(PostgresQueries.createSchema(schema))
 		
-		val tweetTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_TABLE(
-				id TEXT PRIMARY KEY,
-				created_at TEXT,
-				published_time BIGINT,
-				user_id TEXT,
-				user_name TEXT,
-				user_screen_name TEXT,
-				text TEXT,
-				source TEXT,
-				language TEXT,
-				coordinates_longitude TEXT,
-				coordinates_latitude TEXT,
-				possibly_sensitive BOOLEAN
-			)"""
-		st.execute(tweetTable)
+		st.execute(PostgresQueries.createTweetTable(schema))
+		st.execute(PostgresQueries.createUserTable(schema))
+		st.execute(PostgresQueries.createWithheldInCountryTable(schema))
+		st.execute(PostgresQueries.createPlaceTable(schema))
+		st.execute(PostgresQueries.createSocialMessageTable(schema))
+		st.execute(PostgresQueries.createBlueskyPostTable(schema))
 		
-		val userTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$USER_TABLE(
-				id TEXT PRIMARY KEY,
-				screen_name TEXT,
-				name TEXT,
-				created_at TIMESTAMP,
-				verified BOOLEAN,
-				protected BOOLEAN
-			)"""
-		st.execute(userTable)
+		st.execute(PostgresQueries.createReplyTable(schema))
+		st.execute(PostgresQueries.createQuoteTable(schema))
+		st.execute(PostgresQueries.createRetweetTable(schema))
 		
-		val withheldInCountryTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$WITHHELD_IN_COUNTRY_TABLE(
-				user_id TEXT,
-				country TEXT,
-				PRIMARY KEY(user_id, country)
-			)"""
-		st.execute(withheldInCountryTable)
-		
-		val placeTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$PLACE_TABLE(
-				id TEXT PRIMARY KEY,
-				name TEXT,
-				full_name TEXT,
-				country_code TEXT,
-				country TEXT,
-				place_type TEXT,
-				bounding_box TEXT,
-				type_bounding_box TEXT
-			)"""
-		st.execute(placeTable)
-		
-		val replyTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$REPLY_TABLE(
-				tweet_id TEXT,
-				in_reply_to_tweet_id TEXT,
-				in_reply_to_user_id TEXT,
-				in_reply_to_screen_name TEXT,
-				PRIMARY KEY(tweet_id, in_reply_to_tweet_id)
-			)"""
-		st.execute(replyTable)
-		
-		val quoteTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$QUOTE_TABLE(
-				tweet_id TEXT,
-				quoted_tweet_id TEXT,
-				PRIMARY KEY(tweet_id, quoted_tweet_id)
-			)"""
-		st.execute(quoteTable)
-		
-		val retweetTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$RETWEET_TABLE(
-				tweet_id TEXT,
-				retweeted_tweet_id TEXT,
-				PRIMARY KEY(tweet_id, retweeted_tweet_id)
-			)"""
-		st.execute(retweetTable)
-		
-		val tweetHashtagTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_HASHTAG_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				hashtag TEXT,
-				start_indice INTEGER,
-				end_indice INTEGER,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetHashtagTable)
-		
-		val tweetUrlTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_URL_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				url TEXT,
-				expanded_url TEXT,
-				display_url TEXT,
-				status INTEGER,
-				title TEXT,
-				description TEXT,
-				start_indice INTEGER,
-				end_indice INTEGER,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetUrlTable)
-		
-		val tweetCashtagTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_CASHTAG_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				cashtag TEXT,
-				start_indice INTEGER,
-				end_indice INTEGER,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetCashtagTable)
-		
-		val tweetEmojiTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_EMOJI_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				emoji TEXT,
-				start_indice INTEGER,
-				end_indice INTEGER,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetEmojiTable)
-		
-		val tweetMediaTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_MEDIA_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				key TEXT,
-				type TEXT,
-				media_url TEXT,
-				duration_ms INTEGER,
-				height INTEGER,
-				width INTEGER,
-				preview_image_url TEXT,
-				view_count INTEGER,
-				alternative_text TEXT,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetMediaTable)
-		
-		val tweetUserMentionTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_USER_MENTION_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				user_id TEXT,
-				start_indice INTEGER,
-				end_indice INTEGER,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetUserMentionTable)
-		
-		val tweetPlaceTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_PLACE_TABLE(
-				tweet_id TEXT,
-				place_id TEXT,
-				PRIMARY KEY(tweet_id, place_id)
-			)"""
-		st.execute(tweetPlaceTable)
-		
-		val tweetAnnotationTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_ANNOTATION_TABLE(
-				tweet_id TEXT,
-				rank INTEGER,
-				annotation_type TEXT,
-				normalized_text TEXT,
-				start_indice INTEGER,
-				end_indice INTEGER,
-				PRIMARY KEY(tweet_id, rank)
-			)"""
-		st.execute(tweetAnnotationTable)
-		
-		val tweetTagTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$TWEET_TAG_TABLE(
-				tweet_id TEXT,
-				tag TEXT,
-				PRIMARY KEY(tweet_id, tag)
-			)"""
-		st.execute(tweetTagTable)
-		
-		// Tables pour Bluesky
-		val blueskyPostTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$BLUESKY_POST_TABLE(
-				id TEXT PRIMARY KEY,
-				uri TEXT,
-				cid TEXT,
-				author TEXT,
-				text TEXT,
-				reply_count INTEGER,
-				repost_count INTEGER,
-				like_count INTEGER,
-				created_at TIMESTAMP,
-				indexed_at TIMESTAMP,
-				FOREIGN KEY (id) REFERENCES $schema.$MESSAGE_TABLE(id)
-			)"""
-		st.execute(blueskyPostTable)
-		
-		val socialMessageTable: String = s"""CREATE TABLE IF NOT EXISTS $schema.$MESSAGE_TABLE(
-				id TEXT PRIMARY KEY,
-				provider_type TEXT NOT NULL,
-				content TEXT,
-				author_id TEXT,
-				created_at TIMESTAMP,
-				metadata JSONB
-			)"""
-		st.execute(socialMessageTable)
+		st.execute(PostgresQueries.createTweetHashtagTable(schema))
+		st.execute(PostgresQueries.createTweetUrlTable(schema))
+		st.execute(PostgresQueries.createTweetCashtagTable(schema))
+		st.execute(PostgresQueries.createTweetEmojiTable(schema))
+		st.execute(PostgresQueries.createTweetMediaTable(schema))
+		st.execute(PostgresQueries.createTweetUserMentionTable(schema))
+		st.execute(PostgresQueries.createTweetPlaceTable(schema))
+		st.execute(PostgresQueries.createTweetAnnotationTable(schema))
+		st.execute(PostgresQueries.createTweetTagTable(schema))
 		
 		st.close()
 	}
@@ -261,17 +88,17 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 				possibly_sensitive)
     	VALUES(
 			'${tweet.id.get}',
-			${getStringOrNull(tweet.createdAt)},
-			${getValueOrNull(tweet.publishedTimeMs)},
-			${getStringOrNull(tweet.userId)},
-			${if (tweet.user.isDefined) getStringOrNull(tweet.user.get.name) else "NULL"},
-			${if (tweet.user.isDefined) getStringOrNull(tweet.user.get.screenName) else "NULL"},
-			${getStringOrNull(tweet.text)},
-			${getStringOrNull(tweet.source)},
-			${getStringOrNull(tweet.lang)},
-			${getStringOrNull(tweet.longitude)},
-			${getStringOrNull(tweet.latitude)},
-			${getValueOrNull(tweet.possiblySensitive)})
+			'${tweet.createdAt}',
+			${tweet.publishedTime},
+			'${tweet.userId.get}',
+			'${tweet.userName}',
+			'${tweet.userScreenName}',
+			'${tweet.text.replace("'", "''")}',
+			'${tweet.source.replace("'", "''")}',
+			'${tweet.language}',
+			'${tweet.coordinates.map(_.longitude).getOrElse("")}',
+			'${tweet.coordinates.map(_.latitude).getOrElse("")}',
+			${tweet.possiblySensitive})
         ON CONFLICT (id) DO NOTHING""")
 	}
 	
@@ -286,24 +113,22 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 			protected)
     	VALUES(
 			'${user.id.get}',
-			${getStringOrNull(user.screenName)},
-			${getStringOrNull(user.name)},
-			${getStringOrNull(user.createdAt)},
-			${getValueOrNull(user.verified)},
-			${getValueOrNull(user.`protected`)})
+			'${user.screenName.replace("'", "''")}',
+			'${user.name.replace("'", "''")}',
+			'${user.createdAt}',
+			${user.verified},
+			${user.protected})
         ON CONFLICT (id) DO NOTHING""")
 	}
 	
-	def addBatchUserWithheldInCountry(multiInsertions: MultiInsertions, userId: String, countries: scala.Array[String]): Unit = {
-		for (country <- countries) {
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$WITHHELD_IN_COUNTRY_TABLE(
+	def addBatchUserWithheldInCountry(multiInsertions: MultiInsertions, userId: String, country: String): Unit = {
+		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$WITHHELD_IN_COUNTRY_TABLE(
 		    	user_id,
 		    	country)
 	    	VALUES(
 		    	'$userId',
-		    	'${country.replace("'", "''").replace("\u0000", "")}')
+		    	'$country')
             ON CONFLICT (user_id, country) DO NOTHING""")
-		}
 	}
 	
 	def addBatchPlace(multiInsertions: MultiInsertions, place: Place): Unit = {
@@ -319,21 +144,17 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 			type_bounding_box)
     	VALUES(
 			'${place.id.get}',
-			${getStringOrNull(place.name)},
-			${getStringOrNull(place.fullName)},
-			${getStringOrNull(place.countryCode)},
-			${getStringOrNull(place.country)},
-			${getStringOrNull(place.placeType)},
-			${if (place.boundingBox.isEmpty) {
-				"NULL"
-			} else {
-				s"'${place.boundingBox.mkString("\n")}'"
-			}},
-			${getStringOrNull(place.boundingBoxType)})
+			'${place.name.replace("'", "''")}',
+			'${place.fullName.replace("'", "''")}',
+			'${place.countryCode}',
+			'${place.country.replace("'", "''")}',
+			'${place.placeType}',
+			'${place.boundingBox}',
+			'${place.typeBoundingBox}')
         ON CONFLICT (id) DO NOTHING""")
 	}
 	
-	def addBatchReply(multiInsertions: MultiInsertions, tweetId: String, inReplyToTweetId: String, inReplyToUserId: Option[String], inReplyToUserScreenName: Option[String]): Unit = {
+	def addBatchReply(multiInsertions: MultiInsertions, tweetId: String, inReplyToTweetId: String, inReplyToUserId: String, inReplyToScreenName: String): Unit = {
 		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$REPLY_TABLE(
 			tweet_id,
 			in_reply_to_tweet_id,
@@ -342,8 +163,8 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 		VALUES(
 			'$tweetId',
 			'$inReplyToTweetId',
-			${getStringOrNull(inReplyToUserId)},
-			${getStringOrNull(inReplyToUserScreenName)})
+			'$inReplyToUserId',
+			'${inReplyToScreenName.replace("'", "''")}')
 		ON CONFLICT (tweet_id, in_reply_to_tweet_id) DO NOTHING""")
 	}
 	
@@ -378,9 +199,9 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				${getStringOrNull(hashtags(i).content)},
-				${getValueOrNull(hashtags(i).start)},
-				${getValueOrNull(hashtags(i).`end`)})
+				'${hashtags(i).text.replace("'", "''")}',
+				${hashtags(i).startIndice},
+				${hashtags(i).endIndice})
 			ON CONFLICT (tweet_id, rank) DO NOTHING""")
 		}
 	}
@@ -401,14 +222,14 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 	    	VALUES(
 				'$tweetId',
 				${i + 1},
-				${getStringOrNull(urls(i).url)},
-				${getStringOrNull(urls(i).expandedUrl)},
-				${getStringOrNull(urls(i).displayUrl)},
-				${getValueOrNull(urls(i).status)},
-				${getStringOrNull(urls(i).title)},
-				${getStringOrNull(urls(i).description)},
-				${getValueOrNull(urls(i).start)},
-				${getValueOrNull(urls(i).`end`)})
+				'${urls(i).url.replace("'", "''")}',
+				'${urls(i).expandedUrl.replace("'", "''")}',
+				'${urls(i).displayUrl.replace("'", "''")}',
+				${urls(i).status},
+				'${urls(i).title.map(_.replace("'", "''")).getOrElse("")}',
+				'${urls(i).description.map(_.replace("'", "''")).getOrElse("")}',
+				${urls(i).startIndice},
+				${urls(i).endIndice})
             ON CONFLICT (tweet_id, rank) DO NOTHING""")
 		}
 	}
@@ -424,9 +245,9 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				${getStringOrNull(cashtags(i).content)},
-				${getValueOrNull(cashtags(i).start)},
-				${getValueOrNull(cashtags(i).`end`)})
+				'${cashtags(i).text.replace("'", "''")}',
+				${cashtags(i).startIndice},
+				${cashtags(i).endIndice})
 			ON CONFLICT (tweet_id, rank) DO NOTHING""")
 		}
 	}
@@ -449,15 +270,15 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				${getStringOrNull(media.key)},
-				${getStringOrNull(media.mediaType)},
-				${getStringOrNull(media.url)},
-				${getValueOrNull(media.durationMs)},
-				${getValueOrNull(media.height)},
-				${getValueOrNull(media.width)},
- 				${getStringOrNull(media.previewImageUrl)},
-	 			${getValueOrNull(media.viewCount)},
-  				${getStringOrNull(media.altText)})
+				'${media.key.replace("'", "''")}',
+				'${media.mediaType}',
+				'${media.mediaUrl.replace("'", "''")}',
+				${media.durationMs},
+				${media.height},
+				${media.width},
+ 				'${media.previewImageUrl.replace("'", "''")}',
+	 			${media.viewCount},
+  				'${media.alternativeText.map(_.replace("'", "''")).getOrElse("")}')
 			ON CONFLICT (tweet_id, rank) DO NOTHING""")
 		}
 	}
@@ -474,9 +295,9 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 				VALUES(
 					'$tweetId',
 					${i + 1},
-					${getStringOrNull(mentions(i).userId)},
-					${getValueOrNull(mentions(i).start)},
-					${getValueOrNull(mentions(i).`end`)})
+					'${mentions(i).userId}',
+					${mentions(i).startIndice},
+					${mentions(i).endIndice})
 				ON CONFLICT (tweet_id, rank) DO NOTHING""")
 			}
 		}
@@ -504,12 +325,68 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				${getStringOrNull(annotations(i).annotationType)},
-				${getStringOrNull(annotations(i).normalizedText)},
-				${getValueOrNull(annotations(i).start)},
-				${getValueOrNull(annotations(i).`end`)})
+				'${annotations(i).annotationType}',
+				'${annotations(i).normalizedText.replace("'", "''")}',
+				${annotations(i).startIndice},
+				${annotations(i).endIndice})
 			ON CONFLICT (tweet_id, rank) DO NOTHING""")
 		}
+	}
+	
+	def addBatchTag(multiInsertions: MultiInsertions, tweetId: String, tag: String): Unit = {
+		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_TAG_TABLE(
+				tweet_id,
+				tag)
+			VALUES(
+				'$tweetId',
+				'${tag.replace("'", "''")}')
+			ON CONFLICT (tweet_id, tag) DO NOTHING""")
+	}
+	
+	def addBatchBlueskyPost(multiInsertions: MultiInsertions, message: SocialMediaMessage): Unit = {
+		multiInsertions.stmt.addBatch(
+			s"""INSERT INTO $schema.$BLUESKY_POST_TABLE(
+				id,
+				uri,
+				cid,
+				author,
+				text,
+				reply_count,
+				repost_count,
+				like_count,
+				created_at,
+				indexed_at)
+			VALUES(
+				'${message.id}',
+				'${message.metadata.getOrElse("uri", "").toString.replace("'", "''")}',
+				'${message.metadata.getOrElse("cid", "").toString.replace("'", "''")}',
+				'${message.metadata.getOrElse("author", "").toString.replace("'", "''")}',
+				'${message.content.replace("'", "''")}',
+				${message.metadata.getOrElse("reply_count", 0).toString.toInt},
+				${message.metadata.getOrElse("repost_count", 0).toString.toInt},
+				${message.metadata.getOrElse("like_count", 0).toString.toInt},
+				'${message.createdAt}',
+				'${message.metadata.getOrElse("indexed_at", message.createdAt).toString}')
+			ON CONFLICT (id) DO NOTHING""")
+	}
+	
+	def addBatchSocialMessage(multiInsertions: MultiInsertions, message: SocialMediaMessage): Unit = {
+		multiInsertions.stmt.addBatch(
+			s"""INSERT INTO $schema.$MESSAGE_TABLE(
+				id,
+				provider_type,
+				content,
+				author_id,
+				created_at,
+				metadata)
+			VALUES(
+				'${message.id}',
+				'${message.providerType}',
+				'${message.content.replace("'", "''")}',
+				'${message.authorId}',
+				'${message.createdAt}',
+				'${message.metadata.map(_.toString).getOrElse("{}")}')
+			ON CONFLICT (id) DO NOTHING""")
 	}
 	
 	def getMultiInsertions: MultiInsertions = {
@@ -521,71 +398,10 @@ class PostgresDao(val config: PostgresConfiguration) extends Logging {
 		multiInsertions.stmt.close()
 	}
 	
-	private def getStringOrNull(value: Option[String]): String = {
-		if (value.isDefined) {
-			s"'${value.get.replace("'", "''").replace("\u0000", "")}'"
-		} else {
-			"NULL"
-		}
-	}
-	
-	private def getValueOrNull[T](value: Option[T]): String = {
-		if (value.isDefined) {
-			s"${value.get}"
-		} else {
-			"NULL"
-		}
-	}
-	
 	def close(): Unit = {
 		if (!conn.isClosed) {
 			logger.info("Shutdown PostgresDao connection.")
 			conn.close()
-		}
-	}
-	
-	/**
-	 * Insère un message Bluesky dans la base de données
-	 */
-	def insertBlueskyMessage(message: SocialMediaMessage): Unit = {
-		val multiInsertions = getMultiInsertions
-		try {
-			// Insertion dans la table commune des messages
-			val metadataJson = message.metadata.map {
-				case (k, v: String) => s""""$k":"${escapeSQL(v)}""""
-				case (k, v) => s""""$k":$v"""
-			}.mkString("{", ",", "}")
-			
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$MESSAGE_TABLE 
-				(id, provider_type, content, author_id, created_at, metadata) 
-				VALUES ('${message.id}', '${message.providerType}', '${escapeSQL(message.content)}', 
-					'${message.authorId}', '${message.createdAt}', '$metadataJson'::jsonb)
-				ON CONFLICT (id) DO NOTHING""")
-			
-			// Insertion dans la table spécifique Bluesky
-			val replyCount = message.metadata.getOrElse("replyCount", 0).asInstanceOf[Int]
-			val repostCount = message.metadata.getOrElse("repostCount", 0).asInstanceOf[Int]
-			val likeCount = message.metadata.getOrElse("likeCount", 0).asInstanceOf[Int]
-			
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$BLUESKY_POST_TABLE 
-				(id, uri, cid, author, text, reply_count, repost_count, like_count, created_at, indexed_at) 
-				VALUES ('${message.id}', 
-					${getStringOrNull(message.metadata.get("uri").map(_.toString))},
-					${getStringOrNull(message.metadata.get("cid").map(_.toString))},
-					'${message.authorId}',
-					'${escapeSQL(message.content)}',
-					$replyCount,
-					$repostCount,
-					$likeCount,
-					'${message.createdAt}',
-					'${message.createdAt}')
-				ON CONFLICT (id) DO NOTHING""")
-			
-			executeBatch(multiInsertions)
-		} catch {
-			case e: Exception => 
-				logger.error("Error inserting Bluesky message", e)
-				throw e
 		}
 	}
 }

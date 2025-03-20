@@ -1,75 +1,75 @@
 package modules.exporter.postgresql
 
-import java.sql.SQLException
-import java.sql.Statement
-
-import models.tweet.{Place, Tweet, User}
+import java.sql._
 import models.SocialMediaMessage
-import providers.ProviderType
 import play.api.Logging
 
-/**
- * Gestionnaire d'insertion dans PostgreSQL
- */
-class PostgresInsertion(val config: PostgresConfiguration) extends Logging {
-	private val postgresDao = new PostgresDao(config)
-	private val MAX_BATCH_SIZE = 1000
-	private var batchCount = 0
+class PostgresInsertion(val config: PostgresConfig) extends Logging {
+	private val conn: Connection = DriverManager.getConnection(config.getUrl, config.getProperties)
+	private val schema: String = config.schema
 	
 	/**
-	 * Insère une ligne de données brute (compatible avec Twitter)
+	 * Insère une ligne dans la base de données
 	 */
-	def insertLine(line: String): Unit = {
+	def insertLine(json: String): Unit = {
+		val stmt = conn.createStatement()
 		try {
-			val tweet = new Tweet(line)
-			if (tweet.id.isDefined) {
-				postgresDao.insertTweet(tweet)
-				batchCount += 1
-				if (batchCount >= MAX_BATCH_SIZE) {
-					insertBatch()
-				}
-			}
-		} catch {
-			case e: Exception => logger.error("Failed to insert tweet line", e)
+			stmt.execute(s"""INSERT INTO $schema.${PostgresConstants.MESSAGE_TABLE} 
+				(id, provider_type, content, author_id, created_at, metadata) 
+				VALUES ('${json}', 'twitter', '${json}', '${json}', NOW(), '${json}'::jsonb)
+				ON CONFLICT (id) DO NOTHING""")
+		} finally {
+			stmt.close()
 		}
 	}
 	
 	/**
-	 * Insère un message standardisé de Bluesky
+	 * Insère un message Bluesky dans la base de données
 	 */
 	def insertBlueskyMessage(message: SocialMediaMessage): Unit = {
+		val stmt = conn.createStatement()
 		try {
-			if (message.providerType == ProviderType.Bluesky) {
-				postgresDao.insertBlueskyMessage(message)
-				batchCount += 1
-				if (batchCount >= MAX_BATCH_SIZE) {
-					insertBatch()
-				}
-			} else {
-				logger.warn(s"Expected Bluesky message but got ${message.providerType}")
-			}
-		} catch {
-			case e: Exception => logger.error("Failed to insert Bluesky message", e)
+			// Insertion dans la table commune des messages
+			val metadataJson = message.metadata.map {
+				case (k, v: String) => s""""$k":"${escapeSQL(v)}""""
+				case (k, v) => s""""$k":$v"""
+			}.mkString("{", ",", "}")
+			
+			stmt.execute(s"""INSERT INTO $schema.${PostgresConstants.MESSAGE_TABLE} 
+				(id, provider_type, content, author_id, created_at, metadata) 
+				VALUES ('${message.id}', '${message.providerType}', '${escapeSQL(message.content)}', 
+					'${message.authorId}', '${message.createdAt}', '$metadataJson'::jsonb)
+				ON CONFLICT (id) DO NOTHING""")
+			
+			// Insertion dans la table spécifique Bluesky
+			val replyCount = message.metadata.getOrElse("reply_count", 0).toString.toInt
+			val repostCount = message.metadata.getOrElse("repost_count", 0).toString.toInt
+			val likeCount = message.metadata.getOrElse("like_count", 0).toString.toInt
+			
+			stmt.execute(s"""INSERT INTO $schema.${PostgresConstants.BLUESKY_POST_TABLE} 
+				(id, uri, cid, author, text, reply_count, repost_count, like_count, created_at, indexed_at) 
+				VALUES ('${message.id}', 
+					'${message.metadata.getOrElse("uri", "").toString.replace("'", "''")}',
+					'${message.metadata.getOrElse("cid", "").toString.replace("'", "''")}',
+					'${message.authorId}',
+					'${escapeSQL(message.content)}',
+					$replyCount,
+					$repostCount,
+					$likeCount,
+					'${message.createdAt}',
+					'${message.createdAt}')
+				ON CONFLICT (id) DO NOTHING""")
+		} finally {
+			stmt.close()
 		}
 	}
 	
-	/**
-	 * Insère un lot de données
-	 */
-	def insertBatch(): Unit = {
-		try {
-			postgresDao.executeBatch()
-			batchCount = 0
-		} catch {
-			case e: Exception => logger.error("Failed to execute batch", e)
-		}
+	private def escapeSQL(str: String): String = {
+		str.replace("'", "''")
 	}
 	
-	/**
-	 * Ferme les connexions
-	 */
 	def close(): Unit = {
-		postgresDao.close()
+		conn.close()
 	}
 }
 

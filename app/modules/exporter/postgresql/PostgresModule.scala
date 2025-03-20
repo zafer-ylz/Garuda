@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
  */
 class PostgresModule(
 	override val collect: SocialCollect,
-	val config: PostgresConfiguration,
+	val config: PostgresConfig,
 	val moduleFileProcessedDao: ModuleFileProcessedDao
 )(implicit ec: ExecutionContext) extends Module with ModulePlugin {
 	
