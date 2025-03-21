@@ -82,15 +82,15 @@ class CollectController @Inject()(
 	def removeAccountRules(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
 		val nbOfRulesToRemove = request.body.asFormUrlEncoded.get("number_of_rules_to_remove").head.toInt
 		if (nbOfRulesToRemove > 0) {
-			val rulesIds = request.body.asFormUrlEncoded.get("account_rules_ids").flatMap(_.split(",")).map(_.toLong)
+			val rulesIds = request.body.asFormUrlEncoded.get("account_rules_ids").flatMap(_.split(",")).map(id => id.toLong)
 			
 			val collect = updateRulesOfCollect(collectName)
 			val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 			
 			// Conversion de SocialMediaRule à Rule
-			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.map(_.toLong).getOrElse(-1L)))
+			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
 				.map(r => {
-					val id = r.id.map(_.toLong).getOrElse(-1L)
+					val id = r.id.map(id => id.toLong).getOrElse(-1L)
 					val rule = new Rule(id, r.tag, r.content, r.collectName)
 					rule.setActive(r.isActive)
 					rule
@@ -117,7 +117,7 @@ class CollectController @Inject()(
 		
 		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
 		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
-		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.map(_.toLong).getOrElse(-1L)))
+		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
 		
 		var flashData = Map[String, String]()
 		
@@ -230,7 +230,7 @@ class CollectController @Inject()(
 					account.initRules(collect.name)
 					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
-						val activeIds = account.activeRules.map(_.id.map(_.toLong).getOrElse(-1L))
+						val activeIds = account.activeRules.map(rule => rule.id.map(id => id.toLong).getOrElse(-1L))
 						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id)))
 					}
 				}
