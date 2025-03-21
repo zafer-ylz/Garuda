@@ -43,97 +43,112 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 	 */
 	def setupCollect(): Unit = {
 		val st: Statement = conn.createStatement()
-		st.execute(PostgresQueries.createSchema(schema))
 		
-		st.execute(PostgresQueries.createTweetTable(schema))
-		st.execute(PostgresQueries.createUserTable(schema))
-		st.execute(PostgresQueries.createWithheldInCountryTable(schema))
-		st.execute(PostgresQueries.createPlaceTable(schema))
-		st.execute(PostgresQueries.createSocialMessageTable(schema))
-		st.execute(PostgresQueries.createBlueskyPostTable(schema))
-		
-		st.execute(PostgresQueries.createReplyTable(schema))
-		st.execute(PostgresQueries.createQuoteTable(schema))
-		st.execute(PostgresQueries.createRetweetTable(schema))
-		
-		st.execute(PostgresQueries.createTweetHashtagTable(schema))
-		st.execute(PostgresQueries.createTweetUrlTable(schema))
-		st.execute(PostgresQueries.createTweetCashtagTable(schema))
-		st.execute(PostgresQueries.createTweetEmojiTable(schema))
-		st.execute(PostgresQueries.createTweetMediaTable(schema))
-		st.execute(PostgresQueries.createTweetUserMentionTable(schema))
-		st.execute(PostgresQueries.createTweetPlaceTable(schema))
-		st.execute(PostgresQueries.createTweetAnnotationTable(schema))
-		st.execute(PostgresQueries.createTweetTagTable(schema))
-		
-		st.close()
+		try {
+			// Création du schéma
+			st.execute(PostgresQueries.createSchema(schema))
+			
+			// Création des tables principales
+			st.execute(PostgresQueries.createTweetTable(schema))
+			st.execute(PostgresQueries.createUserTable(schema))
+			st.execute(PostgresQueries.createWithheldInCountryTable(schema))
+			st.execute(PostgresQueries.createPlaceTable(schema))
+			st.execute(PostgresQueries.createSocialMessageTable(schema))
+			st.execute(PostgresQueries.createBlueskyPostTable(schema))
+			
+			// Création des tables de relations
+			st.execute(PostgresQueries.createReplyTable(schema))
+			st.execute(PostgresQueries.createQuoteTable(schema))
+			st.execute(PostgresQueries.createRetweetTable(schema))
+			
+			// Création des tables d'entités liées aux tweets
+			st.execute(PostgresQueries.createTweetHashtagTable(schema))
+			st.execute(PostgresQueries.createTweetUrlTable(schema))
+			st.execute(PostgresQueries.createTweetCashtagTable(schema))
+			st.execute(PostgresQueries.createTweetEmojiTable(schema))
+			st.execute(PostgresQueries.createTweetMediaTable(schema))
+			st.execute(PostgresQueries.createTweetUserMentionTable(schema))
+			st.execute(PostgresQueries.createTweetPlaceTable(schema))
+			st.execute(PostgresQueries.createTweetAnnotationTable(schema))
+			st.execute(PostgresQueries.createTweetTagTable(schema))
+		} finally {
+			st.close()
+		}
 	}
 	
 	def addBatchTweet(multiInsertions: MultiInsertions, tweet: Tweet): Unit = {
 		assert(tweet.id.isDefined)
 		assert(tweet.userId.isDefined)
-		multiInsertions.stmt.addBatch(
-			s"""INSERT INTO $schema.$TWEET_TABLE(
-				id,
-				created_at,
-				published_time,
-				user_id,
-				user_name,
-				user_screen_name,
-				text,
-				source,
-				language,
-				coordinates_longitude,
-				coordinates_latitude,
-				possibly_sensitive)
-    	VALUES(
+		
+		val sql = s"""INSERT INTO $schema.$TWEET_TABLE(
+			id,
+			created_at,
+			published_time,
+			user_id,
+			user_name,
+			user_screen_name,
+			text,
+			source,
+			language,
+			coordinates_longitude,
+			coordinates_latitude,
+			possibly_sensitive)
+		VALUES(
 			'${tweet.id.get}',
 			'${tweet.createdAt}',
 			${tweet.publishedTime},
 			'${tweet.userId.get}',
-			'${tweet.userName}',
-			'${tweet.userScreenName}',
-			'${tweet.text.replace("'", "''")}',
-			'${tweet.source.replace("'", "''")}',
-			'${tweet.language}',
+			'${escapeSQL(tweet.userName)}',
+			'${escapeSQL(tweet.userScreenName)}',
+			'${escapeSQL(tweet.text)}',
+			'${escapeSQL(tweet.source)}',
+			'${escapeSQL(tweet.language)}',
 			'${tweet.coordinates.map(_.longitude).getOrElse("")}',
 			'${tweet.coordinates.map(_.latitude).getOrElse("")}',
 			${tweet.possiblySensitive})
-        ON CONFLICT (id) DO NOTHING""")
+		ON CONFLICT (id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchUser(multiInsertions: MultiInsertions, user: User): Unit = {
 		assert(user.id.isDefined)
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$USER_TABLE(
+		
+		val sql = s"""INSERT INTO $schema.$USER_TABLE(
 			id,
 			screen_name,
 			name,
 			created_at,
 			verified,
 			protected)
-    	VALUES(
+		VALUES(
 			'${user.id.get}',
-			'${user.screenName.replace("'", "''")}',
-			'${user.name.replace("'", "''")}',
+			'${escapeSQL(user.screenName)}',
+			'${escapeSQL(user.name)}',
 			'${user.createdAt}',
 			${user.verified},
 			${user.protected})
-        ON CONFLICT (id) DO NOTHING""")
+		ON CONFLICT (id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchUserWithheldInCountry(multiInsertions: MultiInsertions, userId: String, country: String): Unit = {
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$WITHHELD_IN_COUNTRY_TABLE(
+		val sql = s"""INSERT INTO $schema.$WITHHELD_IN_COUNTRY_TABLE(
 		    	user_id,
 		    	country)
 	    	VALUES(
 		    	'$userId',
-		    	'$country')
-            ON CONFLICT (user_id, country) DO NOTHING""")
+		    	'${escapeSQL(country)}')
+            ON CONFLICT (user_id, country) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchPlace(multiInsertions: MultiInsertions, place: Place): Unit = {
 		assert(place.id.isDefined)
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$PLACE_TABLE(
+		
+		val sql = s"""INSERT INTO $schema.$PLACE_TABLE(
 			id,
 			name,
 			full_name,
@@ -144,18 +159,20 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			type_bounding_box)
     	VALUES(
 			'${place.id.get}',
-			'${place.name.replace("'", "''")}',
-			'${place.fullName.replace("'", "''")}',
-			'${place.countryCode}',
-			'${place.country.replace("'", "''")}',
-			'${place.placeType}',
-			'${place.boundingBox}',
-			'${place.typeBoundingBox}')
-        ON CONFLICT (id) DO NOTHING""")
+			'${escapeSQL(place.name)}',
+			'${escapeSQL(place.fullName)}',
+			'${escapeSQL(place.countryCode)}',
+			'${escapeSQL(place.country)}',
+			'${escapeSQL(place.placeType)}',
+			'${escapeSQL(place.boundingBox)}',
+			'${escapeSQL(place.typeBoundingBox)}')
+        ON CONFLICT (id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchReply(multiInsertions: MultiInsertions, tweetId: String, inReplyToTweetId: String, inReplyToUserId: String, inReplyToScreenName: String): Unit = {
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$REPLY_TABLE(
+		val sql = s"""INSERT INTO $schema.$REPLY_TABLE(
 			tweet_id,
 			in_reply_to_tweet_id,
 			in_reply_to_user_id,
@@ -164,33 +181,39 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			'$tweetId',
 			'$inReplyToTweetId',
 			'$inReplyToUserId',
-			'${inReplyToScreenName.replace("'", "''")}')
-		ON CONFLICT (tweet_id, in_reply_to_tweet_id) DO NOTHING""")
+			'${escapeSQL(inReplyToScreenName)}')
+		ON CONFLICT (tweet_id, in_reply_to_tweet_id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchQuote(multiInsertions: MultiInsertions, tweetId: String, quotedTweetId: String): Unit = {
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$QUOTE_TABLE(
+		val sql = s"""INSERT INTO $schema.$QUOTE_TABLE(
 			tweet_id,
 			quoted_tweet_id)
 		VALUES(
 			'$tweetId',
 			'$quotedTweetId')
-		ON CONFLICT (tweet_id, quoted_tweet_id) DO NOTHING""")
+		ON CONFLICT (tweet_id, quoted_tweet_id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchRetweet(multiInsertions: MultiInsertions, tweetId: String, retweetedTweetId: String): Unit = {
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$RETWEET_TABLE(
+		val sql = s"""INSERT INTO $schema.$RETWEET_TABLE(
 			tweet_id,
 			retweeted_tweet_id)
 		VALUES(
 			'$tweetId',
 			'$retweetedTweetId')
-		ON CONFLICT (tweet_id, retweeted_tweet_id) DO NOTHING""")
+		ON CONFLICT (tweet_id, retweeted_tweet_id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchTweetHashtags(multiInsertions: MultiInsertions, tweetId: String, hashtags: scala.Array[Hashtag]): Unit = {
 		for (i <- hashtags.indices) {
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_HASHTAG_TABLE(
+			val sql = s"""INSERT INTO $schema.$TWEET_HASHTAG_TABLE(
 				tweet_id,
 				rank,
 				hashtag,
@@ -199,16 +222,18 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${hashtags(i).text.replace("'", "''")}',
+				'${escapeSQL(hashtags(i).text)}',
 				${hashtags(i).startIndice},
 				${hashtags(i).endIndice})
-			ON CONFLICT (tweet_id, rank) DO NOTHING""")
+			ON CONFLICT (tweet_id, rank) DO NOTHING"""
+			
+			multiInsertions.stmt.addBatch(sql)
 		}
 	}
 	
 	def addBatchTweetUrls(multiInsertions: MultiInsertions, tweetId: String, urls: scala.Array[Url]): Unit = {
 		for (i <- urls.indices) {
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_URL_TABLE(
+			val sql = s"""INSERT INTO $schema.$TWEET_URL_TABLE(
 		    	tweet_id,
 				rank,
 				url,
@@ -222,21 +247,23 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 	    	VALUES(
 				'$tweetId',
 				${i + 1},
-				'${urls(i).url.replace("'", "''")}',
-				'${urls(i).expandedUrl.replace("'", "''")}',
-				'${urls(i).displayUrl.replace("'", "''")}',
+				'${escapeSQL(urls(i).url)}',
+				'${escapeSQL(urls(i).expandedUrl)}',
+				'${escapeSQL(urls(i).displayUrl)}',
 				${urls(i).status},
-				'${urls(i).title.map(_.replace("'", "''")).getOrElse("")}',
-				'${urls(i).description.map(_.replace("'", "''")).getOrElse("")}',
+				'${escapeSQL(urls(i).title.map(_.replace("'", "''")).getOrElse(""))}',
+				'${escapeSQL(urls(i).description.map(_.replace("'", "''")).getOrElse(""))}',
 				${urls(i).startIndice},
 				${urls(i).endIndice})
-            ON CONFLICT (tweet_id, rank) DO NOTHING""")
+            ON CONFLICT (tweet_id, rank) DO NOTHING"""
+			
+			multiInsertions.stmt.addBatch(sql)
 		}
 	}
 	
 	def addBatchTweetCashtags(multiInsertions: MultiInsertions, tweetId: String, cashtags: scala.Array[Cashtag]): Unit = {
 		for (i <- cashtags.indices) {
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_CASHTAG_TABLE(
+			val sql = s"""INSERT INTO $schema.$TWEET_CASHTAG_TABLE(
 				tweet_id,
 				rank,
 				cashtag,
@@ -245,17 +272,19 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${cashtags(i).text.replace("'", "''")}',
+				'${escapeSQL(cashtags(i).text)}',
 				${cashtags(i).startIndice},
 				${cashtags(i).endIndice})
-			ON CONFLICT (tweet_id, rank) DO NOTHING""")
+			ON CONFLICT (tweet_id, rank) DO NOTHING"""
+			
+			multiInsertions.stmt.addBatch(sql)
 		}
 	}
 	
 	def addBatchTweetMedias(multiInsertions: MultiInsertions, tweetId: String, medias: scala.Array[Media]): Unit = {
 		for (i <- medias.indices) {
 			val media: Media = medias(i)
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_MEDIA_TABLE(
+			val sql = s"""INSERT INTO $schema.$TWEET_MEDIA_TABLE(
 				tweet_id,
 				rank,
 				key,
@@ -270,23 +299,25 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${media.key.replace("'", "''")}',
-				'${media.mediaType}',
-				'${media.mediaUrl.replace("'", "''")}',
+				'${escapeSQL(media.key)}',
+				'${escapeSQL(media.mediaType)}',
+				'${escapeSQL(media.mediaUrl)}',
 				${media.durationMs},
 				${media.height},
 				${media.width},
- 				'${media.previewImageUrl.replace("'", "''")}',
+ 				'${escapeSQL(media.previewImageUrl)}',
 	 			${media.viewCount},
-  				'${media.alternativeText.map(_.replace("'", "''")).getOrElse("")}')
-			ON CONFLICT (tweet_id, rank) DO NOTHING""")
+  				'${escapeSQL(media.alternativeText.map(_.replace("'", "''")).getOrElse(""))}')
+			ON CONFLICT (tweet_id, rank) DO NOTHING"""
+			
+			multiInsertions.stmt.addBatch(sql)
 		}
 	}
 	
 	def addBatchTweetUserMentions(multiInsertions: MultiInsertions, tweetId: String, mentions: scala.Array[UserMention]): Unit = {
 		for (i <- mentions.indices) {
 			if (mentions(i).userId != null) {
-				multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_USER_MENTION_TABLE(
+				val sql = s"""INSERT INTO $schema.$TWEET_USER_MENTION_TABLE(
 					tweet_id,
 					rank,
 					user_id,
@@ -295,27 +326,31 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 				VALUES(
 					'$tweetId',
 					${i + 1},
-					'${mentions(i).userId}',
+					'${escapeSQL(mentions(i).userId)}',
 					${mentions(i).startIndice},
 					${mentions(i).endIndice})
-				ON CONFLICT (tweet_id, rank) DO NOTHING""")
+				ON CONFLICT (tweet_id, rank) DO NOTHING"""
+				
+				multiInsertions.stmt.addBatch(sql)
 			}
 		}
 	}
 	
 	def addBatchTweetPlace(multiInsertions: MultiInsertions, tweetId: String, placeId: String): Unit = {
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_PLACE_TABLE(
+		val sql = s"""INSERT INTO $schema.$TWEET_PLACE_TABLE(
 	    	  tweet_id,
 	    	  place_id)
     	  VALUES(
 	    	  '$tweetId',
 	    	  '$placeId')
-          ON CONFLICT (tweet_id, place_id) DO NOTHING""")
+          ON CONFLICT (tweet_id, place_id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchAnnotation(multiInsertions: MultiInsertions, tweetId: String, annotations: scala.Array[Annotation]): Unit = {
 		for (i <- annotations.indices) {
-			multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_ANNOTATION_TABLE(
+			val sql = s"""INSERT INTO $schema.$TWEET_ANNOTATION_TABLE(
 				tweet_id,
 				rank,
 				annotation_type,
@@ -325,27 +360,30 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${annotations(i).annotationType}',
-				'${annotations(i).normalizedText.replace("'", "''")}',
+				'${escapeSQL(annotations(i).annotationType)}',
+				'${escapeSQL(annotations(i).normalizedText)}',
 				${annotations(i).startIndice},
 				${annotations(i).endIndice})
-			ON CONFLICT (tweet_id, rank) DO NOTHING""")
+			ON CONFLICT (tweet_id, rank) DO NOTHING"""
+			
+			multiInsertions.stmt.addBatch(sql)
 		}
 	}
 	
 	def addBatchTag(multiInsertions: MultiInsertions, tweetId: String, tag: String): Unit = {
-		multiInsertions.stmt.addBatch(s"""INSERT INTO $schema.$TWEET_TAG_TABLE(
+		val sql = s"""INSERT INTO $schema.$TWEET_TAG_TABLE(
 				tweet_id,
 				tag)
 			VALUES(
 				'$tweetId',
-				'${tag.replace("'", "''")}')
-			ON CONFLICT (tweet_id, tag) DO NOTHING""")
+				'${escapeSQL(tag)}')
+			ON CONFLICT (tweet_id, tag) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchBlueskyPost(multiInsertions: MultiInsertions, message: SocialMediaMessage): Unit = {
-		multiInsertions.stmt.addBatch(
-			s"""INSERT INTO $schema.$BLUESKY_POST_TABLE(
+		val sql = s"""INSERT INTO $schema.$BLUESKY_POST_TABLE(
 				id,
 				uri,
 				cid,
@@ -358,21 +396,22 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 				indexed_at)
 			VALUES(
 				'${message.id}',
-				'${message.metadata.getOrElse("uri", "").toString.replace("'", "''")}',
-				'${message.metadata.getOrElse("cid", "").toString.replace("'", "''")}',
-				'${message.metadata.getOrElse("author", "").toString.replace("'", "''")}',
-				'${message.content.replace("'", "''")}',
+				'${escapeSQL(message.metadata.getOrElse("uri", "").toString)}',
+				'${escapeSQL(message.metadata.getOrElse("cid", "").toString)}',
+				'${escapeSQL(message.metadata.getOrElse("author", "").toString)}',
+				'${escapeSQL(message.content)}',
 				${message.metadata.getOrElse("reply_count", 0).toString.toInt},
 				${message.metadata.getOrElse("repost_count", 0).toString.toInt},
 				${message.metadata.getOrElse("like_count", 0).toString.toInt},
 				'${message.createdAt}',
 				'${message.metadata.getOrElse("indexed_at", message.createdAt).toString}')
-			ON CONFLICT (id) DO NOTHING""")
+			ON CONFLICT (id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def addBatchSocialMessage(multiInsertions: MultiInsertions, message: SocialMediaMessage): Unit = {
-		multiInsertions.stmt.addBatch(
-			s"""INSERT INTO $schema.$MESSAGE_TABLE(
+		val sql = s"""INSERT INTO $schema.$MESSAGE_TABLE(
 				id,
 				provider_type,
 				content,
@@ -382,11 +421,13 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'${message.id}',
 				'${message.providerType}',
-				'${message.content.replace("'", "''")}',
+				'${escapeSQL(message.content)}',
 				'${message.authorId}',
 				'${message.createdAt}',
 				'${message.metadata.map(_.toString).getOrElse("{}")}')
-			ON CONFLICT (id) DO NOTHING""")
+			ON CONFLICT (id) DO NOTHING"""
+		
+		multiInsertions.stmt.addBatch(sql)
 	}
 	
 	def getMultiInsertions: MultiInsertions = {
@@ -394,8 +435,15 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 	}
 	
 	def executeBatch(multiInsertions: MultiInsertions): Unit = {
-		multiInsertions.stmt.executeBatch()
-		multiInsertions.stmt.close()
+		try {
+			multiInsertions.stmt.executeBatch()
+		} finally {
+			multiInsertions.stmt.close()
+		}
+	}
+	
+	private def escapeSQL(str: String): String = {
+		str.replace("'", "''")
 	}
 	
 	def close(): Unit = {
