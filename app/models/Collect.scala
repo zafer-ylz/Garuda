@@ -23,9 +23,19 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 	
 	// Méthodes d'adaptation entre Rule et SocialMediaRule
 	private def adaptRule(rule: Rule): SocialMediaRule = {
+		// Conversion de LocalDateTime à DateTime
+		val jodaDateTime = new org.joda.time.DateTime(
+			rule.createdAt.getYear,
+			rule.createdAt.getMonthValue,
+			rule.createdAt.getDayOfMonth,
+			rule.createdAt.getHour,
+			rule.createdAt.getMinute,
+			rule.createdAt.getSecond
+		)
+		
 		providerType match {
 			case ProviderType.Twitter => 
-				new TwitterRule(Option(rule.id.toString), rule.tag, rule.content, rule.collectName, rule.createdAt)
+				new TwitterRule(Option(rule.id.toString), rule.tag, rule.content, rule.collectName, jodaDateTime)
 			case _ => 
 				throw new UnsupportedOperationException(s"Provider ${providerType} not supported")
 		}

@@ -53,9 +53,21 @@ trait SocialAccount {
   def startCollect(collect: Collect): Either[String, StreamingConnection]
   
   /**
+   * Démarre une collecte sur ce compte (pour la nouvelle API)
+   */
+  def startCollect(collect: SocialCollect): Either[String, StreamingConnection] = 
+    throw new UnsupportedOperationException("Méthode non implémentée")
+  
+  /**
    * Arrête une collecte sur ce compte
    */
   def stopCollect(collect: Collect): Boolean
+  
+  /**
+   * Arrête une collecte sur ce compte (pour la nouvelle API)
+   */
+  def stopCollect(collect: SocialCollect): Boolean =
+    throw new UnsupportedOperationException("Méthode non implémentée")
   
   /**
    * Initialise les règles pour ce compte. Contacte l'API uniquement si les règles n'ont pas déjà été récupérées.
@@ -85,7 +97,12 @@ trait SocialAccount {
   /**
    * Obtient les règles actives
    */
-  def activeRules: List[Rule] = List.empty
+  def activeRules: Seq[SocialMediaRule] = Seq.empty
+  
+  /**
+   * Obtient les règles actives sous forme de List[Rule] pour la compatibilité
+   */
+  def activeRulesList: List[Rule] = List.empty
   
   /**
    * Obtient le type de provider

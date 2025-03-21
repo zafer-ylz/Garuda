@@ -29,8 +29,8 @@ POST    /collects/:collectName/affectRules          controllers.CollectControlle
 POST    /collects/:collectName/removeAccountRules   controllers.CollectController.removeAccountRules(collectName: String)
 POST    /collects/:collectName/start                controllers.CollectController.startCollect(collectName: String)
 POST    /collects/:collectName/stop                 controllers.CollectController.stopCollect(collectName: String)
-POST    /collects/:collectName/remove               controllers.CollectController.removeCollect(collectName: String)
 POST    /collects/:collectName/update               controllers.CollectController.updateCollect(collectName: String)
+POST    /collects/:collectName/remove               controllers.CollectController.removeCollect(collectName: String)
 
 # Modules
 GET     /modules/:collectName                       controllers.ModuleController.seeModules(collectName: String)

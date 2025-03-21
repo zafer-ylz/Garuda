@@ -87,7 +87,14 @@ class CollectController @Inject()(
 			val collect = updateRulesOfCollect(collectName)
 			val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 			
-			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.getOrElse(-1L)))
+			// Conversion de SocialMediaRule à Rule
+			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.map(_.toLong).getOrElse(-1L)))
+				.map(r => {
+					val id = r.id.map(_.toLong).getOrElse(-1L)
+					val rule = new Rule(id, r.tag, r.content, r.collectName)
+					rule.setActive(r.isActive)
+					rule
+				}).toList
 			
 			account.removeRules(collectName, rulesToRemove)
 			
@@ -110,7 +117,7 @@ class CollectController @Inject()(
 		
 		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
 		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
-		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id))
+		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.map(_.toLong).getOrElse(-1L)))
 		
 		var flashData = Map[String, String]()
 		
@@ -223,7 +230,7 @@ class CollectController @Inject()(
 					account.initRules(collect.name)
 					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
-						val activeIds = account.activeRules.map(_.id)
+						val activeIds = account.activeRules.map(_.id.map(_.toLong).getOrElse(-1L))
 						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id)))
 					}
 				}
@@ -236,6 +243,25 @@ class CollectController @Inject()(
 	def createRule(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
 		// Code à implémenter pour créer une règle
 		Redirect(routes.CollectController.seeCollect(collectName))
+	}
+	
+	/**
+	 * Met à jour le compte associé à une collecte
+	 */
+	def updateCollect(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
+		val collectData = collectForm.bindFromRequest().get
+		val collect = Await.result(collectDao.findByName(collectName), Duration.Inf).get
+		
+		// Vérifier si le compte existe
+		val accountExists = Await.result(accountDao.findByName(collectData.account), Duration.Inf).isDefined
+		
+		if (accountExists) {
+			val updatedCollect = new Collect(collect.name, collect.directory, collectData.account, collect.providerType, collect.isActive)
+			Await.result(collectDao.update(collectName, updatedCollect), Duration.Inf)
+			Redirect(routes.CollectController.seeCollect(collectName)).flashing("success" -> "Compte mis à jour avec succès")
+		} else {
+			Redirect(routes.CollectController.seeCollect(collectName)).flashing("error" -> s"Le compte ${collectData.account} n'existe pas")
+		}
 	}
 	
 	private def displayCollect(collect: Collect, flash: Flash = new Flash(Map())): Future[Result] = {

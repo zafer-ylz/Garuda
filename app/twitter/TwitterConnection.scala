@@ -211,8 +211,8 @@ def addRules(collectName: String, temporaryRules: Seq[TemporaryRule], rules: Seq
 		val result = apiInstance.tweets.addOrDeleteRules(addOrDeleteRulesRequest).execute
 		System.out.println(result)
 		val newRules = result.getData.asScala.map(rule =>
-			Rule(rule.getId.toLong, rule.getTag, rule.getValue, collectName)).toSeq
-		newRules.foreach(_.isActive = true)
+			models.Rule(rule.getId.toLong, rule.getTag, rule.getValue, collectName)).toSeq
+		newRules.foreach(_.setActive(true))
 		Right(newRules)
 	} catch {
 		case e: ApiException => {
@@ -234,7 +234,7 @@ def getAllRules(collectName: String): Either[String, Seq[Rule]] = {
 		println(result)
 		if (result.getData != null) {
 			rules = result.getData.asScala.map(rule =>
-				Rule(rule.getId.toLong, rule.getTag, rule.getValue, collectName)).toSeq
+				models.Rule(rule.getId.toLong, rule.getTag, rule.getValue, collectName)).toSeq
 		}
 		Right(rules)
 	} catch {
@@ -247,9 +247,9 @@ def getAllRules(collectName: String): Either[String, Seq[Rule]] = {
 
 /**
  * Removes a set of rules from the Twitter instance.
- *
+ * @return the result of the operation
  */
-def removeRules(rules: Seq[Rule]): Unit = {
+def removeRules(rules: Seq[Rule]): Either[String, Seq[Rule]] = {
 	try {
 		val addOrDeleteRulesRequest = new AddOrDeleteRulesRequest
 		val deleteRulesRequest: DeleteRulesRequest = new DeleteRulesRequest
@@ -262,8 +262,11 @@ def removeRules(rules: Seq[Rule]): Unit = {
 		val result = apiInstance.tweets().addOrDeleteRules(addOrDeleteRulesRequest).execute()
 		println(result)
 		
+		Right(Seq.empty[Rule]) // Retourne une séquence vide puisque les règles ont été supprimées
 	} catch {
-		case e: ApiException => catchApiError(e, "TweetsApi#deleteRules")
+		case e: ApiException => 
+			catchApiError(e, "TweetsApi#deleteRules")
+			Left(catchApiErrorToString(e, "TweetsApi#deleteRules"))
 	}
 }
 

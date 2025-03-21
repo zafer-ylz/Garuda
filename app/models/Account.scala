@@ -57,6 +57,13 @@ case class Account(name: String, accountType: AccountType, bearerToken: String) 
 		getTwitterAccount().isCurrentActiveCollect(collect.adaptToSocialCollect)
 	}
 	
+	/**
+	 * Récupère la collecte active pour la compatibilité avec l'ancien code
+	 */
+	def currentActiveCollect: Option[SocialCollect] = {
+		getTwitterAccount().getActiveCollect
+	}
+	
 	def startCollect(collect: Collect): Either[String, StreamingConnection] = {
 		getTwitterAccount().startCollect(collect.adaptToSocialCollect)
 	}

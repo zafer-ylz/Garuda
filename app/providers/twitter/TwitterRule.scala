@@ -4,13 +4,15 @@ import providers.{ProviderType, SocialMediaRule}
 import org.joda.time.DateTime
 
 case class TwitterRule(
-  override val id: Option[Long],
+  private val _id: Option[String],
   override val tag: String,
   override val content: String,
   override val collectName: String,
   override val createdAt: DateTime = DateTime.now()
 ) extends SocialMediaRule {
   private var active: Boolean = false
+  
+  override def id: Option[Long] = _id.flatMap(id => try { Some(id.toLong) } catch { case _: NumberFormatException => None })
   
   override def providerType: ProviderType = ProviderType.Twitter
   

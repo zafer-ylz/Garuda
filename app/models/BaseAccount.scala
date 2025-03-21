@@ -45,7 +45,7 @@ abstract class BaseAccount extends SocialAccount {
   /**
    * Implémentation par défaut pour la compatibilité avec la nouvelle structure
    */
-  override def startCollect(collect: Collect): Either[String, StreamingConnection] = {
+  def startCollect(collect: Collect): Either[String, StreamingConnection] = {
     startCollect(collect.adaptToSocialCollect)
   }
   
@@ -57,7 +57,7 @@ abstract class BaseAccount extends SocialAccount {
   /**
    * Implémentation par défaut pour la compatibilité avec la nouvelle structure
    */
-  override def stopCollect(collect: Collect): Boolean = {
+  def stopCollect(collect: Collect): Boolean = {
     stopCollect(collect.adaptToSocialCollect)
   }
   
@@ -79,7 +79,7 @@ abstract class BaseAccount extends SocialAccount {
   /**
    * Implémentation par défaut pour la compatibilité avec la nouvelle structure
    */
-  override def addRules(collectName: String, temporaryRules: List[TemporaryRule], rules: List[Rule]): Either[String, Seq[Rule]] = {
+  def addRules(collectName: String, temporaryRules: List[TemporaryRule], rules: List[Rule]): Either[String, Seq[Rule]] = {
     // Conversion des règles standard en SocialMediaRule
     val socialMediaRules = rules.map(r => 
       new providers.twitter.TwitterRule(
@@ -110,7 +110,7 @@ abstract class BaseAccount extends SocialAccount {
   /**
    * Implémentation par défaut pour la compatibilité avec la nouvelle structure
    */
-  override def removeRules(collectName: String, rules: List[Rule]): Either[String, Seq[Rule]] = {
+  def removeRules(collectName: String, rules: List[Rule]): Either[String, Seq[Rule]] = {
     // Conversion des règles standard en SocialMediaRule
     val socialMediaRules = rules.map(r => 
       new providers.twitter.TwitterRule(
@@ -146,7 +146,12 @@ abstract class BaseAccount extends SocialAccount {
   /**
    * Implémentation de activeRules pour la compatibilité
    */
-  override def activeRules: List[Rule] = {
+  def activeRules: Seq[SocialMediaRule] = getActiveRules
+  
+  /**
+   * Implémentation de activeRulesList pour la compatibilité avec l'ancien code
+   */
+  def activeRulesList: List[Rule] = {
     getActiveRules.map(r => {
       val id = r.id.map(_.toLong).getOrElse(-1L)
       val rule = new Rule(id, r.tag, r.content, r.collectName)

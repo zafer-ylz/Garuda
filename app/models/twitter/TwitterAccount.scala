@@ -78,7 +78,7 @@ case class TwitterAccount(
   override def retrieveActiveRules(collectName: String): Either[String, Seq[SocialMediaRule]] = {
     val activeRules = twitterConnection.getAllRules(collectName)
     if (activeRules.isRight) {
-      val rulesConverted = activeRules.right.get.map(rule => 
+      val rulesConverted = activeRules.toOption.get.map(rule => 
         new TwitterRule(
           Option(rule.id.toString),
           rule.tag,
@@ -90,7 +90,7 @@ case class TwitterAccount(
       rules = Some(rulesConverted)
       Right(rules.get)
     } else {
-      Left(activeRules.left.getOrElse("Problem with Twitter API"))
+      Left(activeRules.swap.toOption.getOrElse("Problem with Twitter API"))
     }
   }
   
@@ -109,19 +109,29 @@ case class TwitterAccount(
     val addedRules = twitterConnection.addRules(collectName, temporaryRulesList, rulesList.toList)
     
     if (addedRules.isRight) {
-      val convertedRules = addedRules.right.get.map(rule => 
+      val convertedRules = addedRules.toOption.get.map(rule => {
+        // Conversion de LocalDateTime à DateTime
+        val jodaDateTime = new DateTime(
+          rule.createdAt.getYear,
+          rule.createdAt.getMonthValue,
+          rule.createdAt.getDayOfMonth,
+          rule.createdAt.getHour,
+          rule.createdAt.getMinute,
+          rule.createdAt.getSecond
+        )
+        
         new TwitterRule(
           Option(rule.id.toString),
           rule.tag,
           rule.content,
           rule.collectName,
-          rule.createdAt
+          jodaDateTime
         )
-      )
+      })
       this.rules = Some(convertedRules)
       Right(convertedRules)
     } else {
-      Left(addedRules.left.getOrElse("Problem adding rules"))
+      Left(addedRules.swap.toOption.getOrElse("Problem adding rules"))
     }
   }
   

@@ -277,7 +277,7 @@ csrfToken: String)(implicit request: MessagesRequestHeader)
     <h2>Rules</h2>
 
     @account.initRules(collect.name).fold(displayTwitterError(_), _ =>
-displayAccountActiveRules(account.rules.get.filter(rule => !collect.activeRules.map(r => r.id).contains(rule.id))))
+displayAccountActiveRules(account.activeRules.filter(rule => !collect.activeRules.map(r => r.id.map(_.toLong).getOrElse(-1L)).contains(rule.id.map(_.toLong).getOrElse(-1L)))))
 
     <div style="width: 100%">
         @displayActiveRules(collect.activeRules)
@@ -294,7 +294,7 @@ displayAccountActiveRules(account.rules.get.filter(rule => !collect.activeRules.
             }
         </div>
         <div style="clear: both">
-            @if(account.rules.isDefined) {
+            @if(account.activeRules.nonEmpty) {
                 <input type="button" name="affect_rules" class="affect_rules" value="Affect rules"/>
             }
         </div>

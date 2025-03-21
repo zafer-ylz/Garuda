@@ -5,7 +5,14 @@ package models
 
 import java.time.LocalDateTime
 
-// La classe Rule a été déplacée vers Collect.scala pour éviter les conflits de définition
-// Ce fichier ne contient plus la définition de la classe, mais uniquement un alias pour
-// des raisons de compatibilité avec l'ancien code
+// Objet companion pour créer des instances de Rule
+// La classe Rule elle-même est définie dans Collect.scala
+object Rule {
+  // Méthode factory pour créer des instances de Rule
+  def apply(id: Long, tag: String, content: String, collectName: String,
+            createdAt: LocalDateTime = LocalDateTime.now(), isActive: Boolean = false): Rule = {
+    val rule = new Rule(id, tag, content, collectName, createdAt, isActive)
+    rule
+  }
+}
 
