@@ -51,17 +51,17 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 	}
 	
 	def activeRules: List[Rule] = {
-		_rules.getOrElse(List.empty).filter(_.active)
+		_rules.getOrElse(List.empty).filter(_.isActive)
 	}
 	
 	def nonActiveRules: List[Rule] = {
-		_rules.getOrElse(List.empty).filter(!_.active)
+		_rules.getOrElse(List.empty).filterNot(_.isActive)
 	}
 	
 	def addRule(rule: Rule): Unit = {
 		_rules = Some(_rules.getOrElse(List.empty) ++ List(rule))
 		
-		if (providerType == ProviderType.Twitter && rule.active) {
+		if (providerType == ProviderType.Twitter && rule.isActive) {
 			twitterAdapter.addRules(List(adaptRule(rule)))
 		}
 	}
@@ -70,7 +70,7 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 		_rules = Some(_rules.getOrElse(List.empty).filterNot(r => rules.exists(_.id == r.id)))
 		
 		if (providerType == ProviderType.Twitter) {
-			twitterAdapter.removeRules(adaptRules(rules.filter(_.active)))
+			twitterAdapter.removeRules(adaptRules(rules.filter(_.isActive)))
 		}
 	}
 	
@@ -98,11 +98,29 @@ case class Rule(
 	content: String,
 	collectName: String,
 	createdAt: LocalDateTime = LocalDateTime.now,
-	var active: Boolean = false
+	private var _isActive: Boolean = false
 ) {
-	def setActive(isActive: Boolean): Unit = {
-		active = isActive
+	/**
+	 * Définit si la règle est active
+	 */
+	def setActive(active: Boolean): Unit = {
+		_isActive = active
 	}
+	
+	/**
+	 * Indique si la règle est active
+	 */
+	def isActive: Boolean = _isActive
+	
+	/**
+	 * Accesseur pour la compatibilité avec collectName/collect
+	 */
+	def collect: String = collectName
+	
+	/**
+	 * Propriété pour l'accès via la nouvelle architecture
+	 */
+	def active: Boolean = _isActive
 }
 
 object CollectForm {
