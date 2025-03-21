@@ -5,6 +5,7 @@ import providers.{ProviderType, SocialMediaRule, StreamingConnection}
 import providers.twitter.{TwitterProvider, TwitterRule}
 import twitter.{TwitterConnection, TweetStreamListener}
 import org.joda.time.DateTime
+import java.time.ZoneId
 import scala.collection.JavaConverters._
 
 /**
@@ -78,15 +79,20 @@ case class TwitterAccount(
   override def retrieveActiveRules(collectName: String): Either[String, Seq[SocialMediaRule]] = {
     val activeRules = twitterConnection.getAllRules(collectName)
     if (activeRules.isRight) {
-      val rulesConverted = activeRules.toOption.get.map(rule => 
+      val rulesConverted = activeRules.toOption.get.map(rule => {
+        // Convertir java.time.LocalDateTime à org.joda.time.DateTime
+        val javaDateTime = rule.createdAt
+        val instant = javaDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        val jodaDateTime = new DateTime(instant.toEpochMilli())
+        
         new TwitterRule(
           Option(rule.id.toString),
           rule.tag,
           rule.content,
           rule.collect,
-          rule.createdAt
+          jodaDateTime
         )
-      )
+      })
       rules = Some(rulesConverted)
       Right(rules.get)
     } else {
@@ -111,14 +117,9 @@ case class TwitterAccount(
     if (addedRules.isRight) {
       val convertedRules = addedRules.toOption.get.map(rule => {
         // Conversion de LocalDateTime à DateTime
-        val jodaDateTime = new DateTime(
-          rule.createdAt.getYear,
-          rule.createdAt.getMonthValue,
-          rule.createdAt.getDayOfMonth,
-          rule.createdAt.getHour,
-          rule.createdAt.getMinute,
-          rule.createdAt.getSecond
-        )
+        val javaDateTime = rule.createdAt
+        val instant = javaDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        val jodaDateTime = new DateTime(instant.toEpochMilli())
         
         new TwitterRule(
           Option(rule.id.toString),
@@ -182,12 +183,12 @@ class TwitterStreamConnection(
   }
   
   override def executeListeners(): Unit = {
-    tweetStreamListener.executeListeners()
+    tweetStreamListener.stream().executeListeners()
   }
   
   override def shutdown(): Unit = {
     tweetStreamListener.shutdown()
   }
   
-  def isActive: Boolean = tweetStreamListener.isActive
+  def isActive: Boolean = !tweetStreamListener.caughtException.isDefined
 } 

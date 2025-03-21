@@ -17,6 +17,40 @@ class TemporaryRuleDao @Inject() (protected val dbConfigProvider: DatabaseConfig
 	
 	import profile.api._
 	
+	protected class TemporaryRulesTable(tag: Tag) extends Table[TemporaryRule](tag, "temporary_rule") {
+		/**
+		 * Fields
+		 */
+		def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+		
+		def ruleTag = column[String]("tag")
+		
+		def content = column[String]("content")
+		
+		def collect = column[String]("collect")
+		
+		implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
+			dateTime => new Timestamp(dateTime.getMillis),
+			timeStamp => new DateTime(timeStamp.getTime)
+		)
+		def createdAt = column[java.time.LocalDateTime]("created_at")
+		
+		override def * = (id.?, ruleTag, content, collect, createdAt) <> (
+		  { tuple =>
+		    val (id, tag, content, collect, createdAt) = tuple
+		    val jodaTime = new DateTime(createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant.toEpochMilli)
+		    TemporaryRule(id, tag, content, collect, jodaTime)
+		  },
+		  { rule: TemporaryRule =>
+		    val localDateTime = java.time.LocalDateTime.ofInstant(
+		      java.time.Instant.ofEpochMilli(rule.createdAt.getMillis),
+		      java.time.ZoneId.systemDefault()
+		    )
+		    Some((rule.id, rule.ruleTag, rule.content, rule.collect, localDateTime))
+		  }
+		)
+	}
+	
 	private val rules = TableQuery[TemporaryRulesTable]
 	
 	/** Retrieve all the rules */
@@ -56,26 +90,5 @@ class TemporaryRuleDao @Inject() (protected val dbConfigProvider: DatabaseConfig
 	/** Delete a set of rules */
 	def batchDelete(ids: Seq[Long]): Future[Unit] = {
 		db.run(rules.filter(_.id.inSet(ids)).delete).map(_ => ())
-	}
-	
-	private class TemporaryRulesTable(tag: Tag) extends Table[TemporaryRule](tag, "temporary_rule") {
-		/**
-		 * Fields
-		 */
-		def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-		
-		def ruleTag = column[String]("tag")
-		
-		def content = column[String]("content")
-		
-		def collect = column[String]("collect")
-		
-		implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
-			dateTime => new Timestamp(dateTime.getMillis),
-			timeStamp => new DateTime(timeStamp.getTime)
-		)
-		def createdAt = column[DateTime]("created_at")
-		
-		override def * = (id.?, ruleTag, content, collect, createdAt).mapTo[TemporaryRule]
 	}
 }

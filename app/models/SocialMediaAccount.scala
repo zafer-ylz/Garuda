@@ -1,7 +1,7 @@
 package models
 
 import providers.ProviderType
-import java.time.DateTime
+import org.joda.time.DateTime
 
 case class SocialMediaAccount(
   name: String,

@@ -16,27 +16,7 @@ class RuleDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
 	
 	import profile.api._
 	
-	override protected val tableQuery = TableQuery[RulesTable]
-	
-	override protected def filterById(id: Long): Query[RulesTable, Rule, Seq] =
-		tableQuery.filter(_.id === id)
-	
-	/** Retrieve rules from the collect name */
-	def findByCollectName(name: String): Future[Seq[Rule]] =
-		db.run(tableQuery.filter(_.collect === name).result)
-	
-	/** Update a rule */
-	def update(id: Long, rule: Rule): Future[Unit] = {
-		val ruleToUpdate: Rule = rule.copy(id)
-		db.run(tableQuery.filter(_.id === id).update(ruleToUpdate)).map(_ => ())
-	}
-	
-	/** Delete a set of rules */
-	def batchDelete(ids: Seq[Long]): Future[Unit] = {
-		db.run(tableQuery.filter(_.id.inSet(ids)).delete).map(_ => ())
-	}
-	
-	private class RulesTable(tag: Tag) extends Table[Rule](tag, "rule") {
+	protected class RulesTable(tag: Tag) extends Table[Rule](tag, "rule") {
 		/**
 		 * Fields
 		 */
@@ -55,6 +35,26 @@ class RuleDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
 		def createdAt = column[DateTime]("created_at")
 		
 		
-		override def * = (id, ruleTag, content, collect, createdAt).mapTo[Rule]
+		override def * = (id, ruleTag, content, collect, createdAt) <> (Rule.tupled, Rule.unapply)
+	}
+	
+	override protected val tableQuery = TableQuery[RulesTable]
+	
+	override protected def filterById(id: Long): Query[RulesTable, Rule, Seq] =
+		tableQuery.filter(_.id === id)
+	
+	/** Retrieve rules from the collect name */
+	def findByCollectName(name: String): Future[Seq[Rule]] =
+		db.run(tableQuery.filter(_.collect === name).result)
+	
+	/** Update a rule */
+	def update(id: Long, rule: Rule): Future[Unit] = {
+		val ruleToUpdate: Rule = rule.copy(id)
+		db.run(tableQuery.filter(_.id === id).update(ruleToUpdate)).map(_ => ())
+	}
+	
+	/** Delete a set of rules */
+	def batchDelete(ids: Seq[Long]): Future[Unit] = {
+		db.run(tableQuery.filter(_.id.inSet(ids)).delete).map(_ => ())
 	}
 }

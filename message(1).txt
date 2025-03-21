@@ -1,63 +1,22 @@
-[info] compiling 119 Scala sources and 1 Java source to /app/target/scala-2.13/classes ...
-[error] /app/app/controllers/CollectController.scala:91:85: value map is not a member of Long
+[info] compiling 120 Scala sources and 1 Java source to /app/target/scala-2.13/classes ...
+[error] /app/app/controllers/CollectController.scala:15:8: object FakeRequest is not a member of package play.api.test
+[error] import play.api.test.FakeRequest
+[error]        ^
+[error] /app/app/controllers/CollectController.scala:92:85: value map is not a member of Long
 [error] 			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
 [error] 			                                                                                 ^
-[error] /app/app/controllers/CollectController.scala:120:99: value map is not a member of Long
+[error] /app/app/controllers/CollectController.scala:121:99: value map is not a member of Long
 [error] 		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
 [error] 		                                                                                                ^
-[error] /app/app/controllers/CollectController.scala:224:24: type mismatch;
-[error]  found   : Seq[models.Rule]
-[error]  required: List[models.Rule]
-[error] 					collect.initRules(rules, temporaryRules)
-[error] 					                  ^
-[error] /app/app/controllers/CollectController.scala:224:31: type mismatch;
-[error]  found   : Seq[models.TemporaryRule]
-[error]  required: List[models.TemporaryRule]
-[error] 					collect.initRules(rules, temporaryRules)
-[error] 					                         ^
-[error] /app/app/controllers/CollectController.scala:233:63: value map is not a member of Long
+[error] /app/app/controllers/CollectController.scala:234:63: value map is not a member of Long
 [error] 						val activeIds = account.activeRules.map(rule => rule.id.map(id => id.toLong).getOrElse(-1L))
 [error] 						                                                        ^
-[error] /app/app/controllers/CollectController.scala:271:37: not found: value FakeRequest
-[error] 					implicit val request = Request(FakeRequest(), "")
-[error] 					                               ^
-[error] /app/app/controllers/CollectController.scala:273:30: could not find implicit value for parameter request: play.api.mvc.MessagesRequestHeader (An implicit MessagesProvider instance was not found.  Please see https://www.playframework.com/documentation/latest/ScalaForms#Passing-MessagesProvider-to-Form-Helpers)
+[error] /app/app/controllers/CollectController.scala:273:32: package play.api.mvc.request is not a value
+[error] 					val token = CSRF.getToken(request).getOrElse(CSRF.Token("csrfToken", ""))
+[error] 					                          ^
+[error] /app/app/controllers/CollectController.scala:274:30: could not find implicit value for parameter request: play.api.mvc.MessagesRequestHeader (An implicit MessagesProvider instance was not found.  Please see https://www.playframework.com/documentation/latest/ScalaForms#Passing-MessagesProvider-to-Form-Helpers)
 [error] 					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
 [error] 					                        ^
-[error] /app/app/controllers/ModuleController.scala:8:8: object PostgresConfigurationForm is not a member of package modules.exporter.postgresql
-[error] import modules.exporter.postgresql.{PostgresConfiguration, PostgresConfigurationForm, PostgresModule}
-[error]        ^
-[error] /app/app/controllers/ModuleController.scala:40:4: not found: value PostgresConfigurationForm
-[error] 			PostgresConfigurationForm.form.fill(modules.postgresExporterConfiguration.get)
-[error] 			^
-[error] /app/app/controllers/ModuleController.scala:42:4: not found: value PostgresConfigurationForm
-[error] 			PostgresConfigurationForm.form
-[error] 			^
-[error] /app/app/controllers/ModuleController.scala:70:14: not found: value PostgresConfigurationForm
-[error] 		val form = PostgresConfigurationForm.form
-[error] 		           ^
-[error] /app/app/controllers/ModuleController.scala:97:14: not found: value PostgresConfigurationForm
-[error] 		val form = PostgresConfigurationForm.form
-[error] 		           ^
-[error] /app/app/controllers/ModuleController.scala:116:37: type mismatch;
-[error]  found   : models.Collect
-[error]  required: models.SocialCollect
-[error] 				val module = new PostgresModule(collect, postgresConfiguration.get, moduleFileProcessedDao)
-[error] 				                                ^
-[error] /app/app/controllers/ModuleController.scala:116:68: type mismatch;
-[error]  found   : modules.exporter.postgresql.PostgresConfiguration
-[error]  required: modules.exporter.postgresql.PostgresConfig
-[error] 				val module = new PostgresModule(collect, postgresConfiguration.get, moduleFileProcessedDao)
-[error] 				                                                               ^
-[error] /app/app/dao/CollectDao.scala:49:42: value copy is not a member of models.Collect
-[error] 		val collectToUpdate: Collect = collect.copy(name)
-[error] 		                                       ^
-[error] /app/app/dao/CollectDao.scala:85:71: value apply is not a member of object models.Collect
-[error] 		override def * = (name, directory, account, createdAt) <> ((Collect.apply _).tupled, Collect.unapply)
-[error] 		                                                                    ^
-[error] /app/app/dao/CollectDao.scala:85:96: value unapply is not a member of object models.Collect
-[error] 		override def * = (name, directory, account, createdAt) <> ((Collect.apply _).tupled, Collect.unapply)
-[error] 		                                                                                             ^
 [error] /app/app/dao/RuleDao.scala:21:47: private class RulesTable escapes its defining scope as part of type RuleDao.this.profile.api.Query[RuleDao.this.RulesTable,models.Rule,Seq]
 [error] 	override protected def filterById(id: Long): Query[RulesTable, Rule, Seq] =
 [error] 	                                             ^
@@ -78,15 +37,15 @@
 [error] Error occurred in an application involving default arguments.
 [error] 	extends Rule(id, tag, content, collect, createdAt) {
 [error] 	                                        ^
-[error] /app/app/models/Collect.scala:6:8: object TwitterCollect is not a member of package providers.twitter
-[error] import providers.twitter.{TwitterRule, TwitterCollect}
-[error]        ^
-[error] /app/app/models/Collect.scala:7:8: object Twitter is not a member of package services
-[error] import services.Twitter
-[error]        ^
-[error] /app/app/models/Collect.scala:22:35: not found: type TwitterCollect
-[error] 	private val twitterAdapter = new TwitterCollect(name, directory, accountName)
-[error] 	                                 ^
+[error] /app/app/models/Collect.scala:58:4: not found: value twitterAdapter
+[error] 			twitterAdapter.initRules(adaptedRules)
+[error] 			^
+[error] /app/app/models/Collect.scala:74:4: not found: value twitterAdapter
+[error] 			twitterAdapter.addRules(List(adaptRule(rule)))
+[error] 			^
+[error] /app/app/models/Collect.scala:82:4: not found: value twitterAdapter
+[error] 			twitterAdapter.removeRules(adaptRules(rules.filter(_.isActive)))
+[error] 			^
 [error] /app/app/models/SocialMediaAccount.scala:4:8: object DateTime is not a member of package java.time
 [error] import java.time.DateTime
 [error]        ^
@@ -369,13 +328,58 @@
 [error] /app/app/modules/exporter/postgresql/PostgresDao.scala:276:19: value startIndice is not a member of models.tweet.Cashtag
 [error] 				${cashtags(i).startIndice},
 [error] 				              ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:277:19: value endIndice is not a member of models.tweet.Cashtag
+[error] 				${cashtags(i).endIndice})
+[error] 				              ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:302:24: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(media.key)}',
+[error] 				                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:303:24: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(media.mediaType)}',
+[error] 				                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:304:24: value mediaUrl is not a member of models.tweet.Media
+[error] 				'${escapeSQL(media.mediaUrl)}',
+[error] 				                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:308:25: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error]  				'${escapeSQL(media.previewImageUrl)}',
+[error]  				                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:310:26: value alternativeText is not a member of models.tweet.Media
+[error]   				'${escapeSQL(media.alternativeText.map(_.replace("'", "''")).getOrElse(""))}')
+[error]   				                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:329:31: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 					'${escapeSQL(mentions(i).userId)}',
+[error] 					                         ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:330:20: value startIndice is not a member of models.tweet.UserMentio
+[error] 					${mentions(i).startIndice},
+[error] 					              ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:331:20: value endIndice is not a member of models.tweet.UserMention
+[error] 					${mentions(i).endIndice})
+[error] 					              ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:363:33: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(annotations(i).annotationType)}',
+[error] 				                            ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:364:33: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(annotations(i).normalizedText)}',
+[error] 				                            ^
 [error] 100 errors found
 [error] (Compile / compileIncremental) Compilation failed
-2025-03-21 13:40:31 ERROR play.api.http.DevHttpErrorHandler  
+2025-03-21 13:52:25 ERROR play.api.http.DevHttpErrorHandler  
 
-! @88onddk6k - Internal server error, for (GET) [/] ->
+! @88onf2ao2 - Internal server error, for (GET) [/] ->
  
-play.sbt.PlayExceptions$CompilationException: Compilation error[value map is not a member of Long]
+play.sbt.PlayExceptions$CompilationException: Compilation error[object FakeRequest is not a member of package play.api.test]
 	at play.sbt.PlayExceptions$CompilationException$.apply(PlayExceptions.scala:34)
 	at play.sbt.PlayExceptions$CompilationException$.apply(PlayExceptions.scala:34)
 	at scala.Option.map(Option.scala:230)

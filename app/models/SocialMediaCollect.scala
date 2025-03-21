@@ -1,7 +1,7 @@
 package models
 
 import providers.{ProviderType, SocialMediaRule}
-import java.time.DateTime
+import org.joda.time.DateTime
 
 case class SocialMediaCollect(
   name: String,
@@ -11,7 +11,7 @@ case class SocialMediaCollect(
   createdAt: DateTime = DateTime.now()
 ) {
   private var rules: Seq[SocialMediaRule] = Seq.empty
-  private var isActive: Boolean = false
+  private var _isActive: Boolean = false
   
   def activeRules: Seq[SocialMediaRule] = rules.filter(_.isActive)
   
@@ -26,12 +26,12 @@ case class SocialMediaCollect(
   }
   
   def setActive(active: Boolean): Unit = {
-    isActive = active
+    _isActive = active
   }
   
-  def isActive: Boolean = isActive
+  def isActive: Boolean = _isActive
   
   def close(): Unit = {
-    isActive = false
+    _isActive = false
   }
 } 

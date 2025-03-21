@@ -12,7 +12,6 @@ import play.api.data._
 import play.api.mvc._
 import play.filters.csrf._
 import services.ProviderManager
-import play.api.test.FakeRequest
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -89,9 +88,12 @@ class CollectController @Inject()(
 			val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 			
 			// Conversion de SocialMediaRule à Rule
-			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
+			val rulesToRemove = account.activeRules.filter(rule => {
+				val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
+				rulesIds.contains(ruleId)
+			})
 				.map(r => {
-					val id = r.id.map(id => id.toLong).getOrElse(-1L)
+					val id = r.id.map(_.toLong).getOrElse(-1L)
 					val rule = new Rule(id, r.tag, r.content, r.collectName)
 					rule.setActive(r.isActive)
 					rule
@@ -118,7 +120,10 @@ class CollectController @Inject()(
 		
 		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
 		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
-		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
+		val newNonActiveRules = collect.activeRules.filter(rule => {
+			val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
+			newNonActiveIdRules.contains(ruleId)
+		})
 		
 		var flashData = Map[String, String]()
 		
@@ -231,7 +236,9 @@ class CollectController @Inject()(
 					account.initRules(collect.name)
 					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
-						val activeIds = account.activeRules.map(rule => rule.id.map(id => id.toLong).getOrElse(-1L))
+						val activeIds = account.activeRules.map(rule => {
+							rule.id.map(_.toLong).getOrElse(-1L)
+						})
 						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id)))
 					}
 				}
@@ -269,10 +276,10 @@ class CollectController @Inject()(
 		accountDao.all().map { accounts =>
 			accountDao.findByName(collect.accountName).map {
 				case Some(account) => {
-					// Utilisation d'un simple FakeRequest sans message provider spécifique
-					val token = CSRF.getToken(request).getOrElse(CSRF.Token("csrfToken", ""))
+					// Récupération implicite du provider de messages et CSRF
+					implicit val request: MessagesRequest[AnyContent] = this.request
 					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
-						postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), token.value)).flashing(flash)
+						postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), CSRF.getToken.map(_.value).getOrElse(""))).flashing(flash)
 				}
 				case None => InternalServerError(s"Account ${collect.accountName} not found.")
 			}
