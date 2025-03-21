@@ -124,6 +124,10 @@ case class TwitterAccount(
    * Méthode pour obtenir le token bearer (spécifique à Twitter)
    */
   def getBearerToken: String = bearerToken
+  
+  override def cancel(): Boolean = {
+    tweetStreamListener.isActive
+  }
 }
 
 /**
