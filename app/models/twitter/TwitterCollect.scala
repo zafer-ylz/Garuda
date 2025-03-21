@@ -6,55 +6,105 @@ import providers.twitter.TwitterRule
 import twitter.ObservableFile
 import org.joda.time.DateTime
 
+import scala.collection.mutable.ListBuffer
+
 /**
- * Implémentation d'une collecte Twitter.
+ * Implémentation de SocialCollect pour Twitter
  */
-case class TwitterCollect(
+class TwitterCollect(
   override val name: String,
   override val directory: String,
   override val accountName: String,
-  override val createdAt: DateTime = DateTime.now()
+  override val isActive: Boolean = false,
+  override val createdAt: DateTime = new DateTime()
 ) extends SocialCollect {
-  private var rules: Seq[SocialMediaRule] = Seq.empty
-  private var _isActive: Boolean = false
-  private var observableFile: ObservableFile = new ObservableFile(None)
-  private var _temporaryRules: Option[Seq[TemporaryRule]] = None
   
-  override def providerType: ProviderType = ProviderType.Twitter
+  override def providerType: ProviderType.ProviderType = ProviderType.Twitter
   
-  override def isActive: Boolean = _isActive
+  // Variables pour stockage des données
+  private val rules = new ListBuffer[TwitterRule]()
+  private var temporaryRules = List.empty[TemporaryRule]
+  private var active: Boolean = isActive
   
-  override def activeRules: Seq[SocialMediaRule] = {
-    rules.filter(_.isActive)
+  /**
+   * Convertit une règle du modèle général au modèle spécifique à Twitter
+   */
+  def convertRule(rule: models.Rule): TwitterRule = {
+    new TwitterRule(
+      Some(rule.id.toString),
+      rule.tag,
+      rule.content,
+      rule.collectName,
+      rule.createdAt
+    )
   }
+  
+  /**
+   * Initialise les règles de la collecte
+   */
+  def initRules(newRules: List[SocialMediaRule]): Unit = {
+    rules.clear()
+    rules ++= newRules.collect { case r: TwitterRule => r }
+  }
+  
+  /**
+   * Définit les règles temporaires
+   */
+  def setTemporaryRules(newRules: List[TemporaryRule]): Unit = {
+    temporaryRules = newRules
+  }
+  
+  /**
+   * Ajoute une règle à la collecte
+   */
+  def addRule(rule: TwitterRule): Boolean = {
+    rules += rule
+    true
+  }
+  
+  /**
+   * Supprime des règles de la collecte
+   */
+  def removeRules(rulesToRemove: List[TwitterRule]): Boolean = {
+    val idsToRemove = rulesToRemove.flatMap(_.id).toSet
+    rules --= rules.filter(r => r.id.exists(idsToRemove.contains))
+    true
+  }
+  
+  /**
+   * Renvoie les règles actives
+   */
+  def activeRules: List[TwitterRule] = rules.filter(_.isActive).toList
+  
+  override def isActive: Boolean = active
+  
+  override def setActive(newActive: Boolean): Unit = {
+    this.active = newActive
+  }
+  
+  /**
+   * Ferme la collecte
+   */
+  override def close(): Unit = {
+    active = false
+  }
+  
+  private var observableFile: ObservableFile = new ObservableFile(None)
   
   override def nonActiveRules: Seq[SocialMediaRule] = {
-    rules.filterNot(_.isActive)
-  }
-  
-  override def initRules(newRules: Seq[SocialMediaRule]): Unit = {
-    this.rules = newRules
-  }
-  
-  override def addRule(rule: SocialMediaRule): Boolean = {
-    rules = rules :+ rule
-    true
+    rules.filterNot(_.isActive).toList
   }
   
   override def addRules(newRules: Seq[SocialMediaRule]): Boolean = {
-    rules = rules ++ newRules
+    rules ++= newRules.collect { case r: TwitterRule => r }
     true
   }
   
-  override def removeRules(rulesToRemove: Seq[SocialMediaRule]): Boolean = {
-    val rulesToRemoveIds = rulesToRemove.flatMap(_.id).toSet
-    rules = rules.filterNot(rule => rule.id.exists(rulesToRemoveIds.contains))
-    true
-  }
-  
-  override def close(): Unit = {
-    _isActive = false
-    observableFile.setNone()
+  override def removeTemporaryRulesFromList(temporaryRulesToRemove: Seq[TemporaryRule]): Unit = {
+    if (temporaryRules.nonEmpty) {
+      val idsToRemove = temporaryRulesToRemove.flatMap(_.id).toSet
+      temporaryRules = temporaryRules.filterNot(rule => rule.id.exists(idsToRemove.contains)).toList
+    }
   }
   
   /**
@@ -69,54 +119,7 @@ case class TwitterCollect(
     observableFile = file
   }
   
-  override def getTemporaryRules: Option[Seq[TemporaryRule]] = _temporaryRules
-  
-  override def setTemporaryRules(temporaryRules: Seq[TemporaryRule]): Unit = {
-    _temporaryRules = Some(temporaryRules)
-  }
-  
-  override def removeTemporaryRulesFromList(temporaryRulesToRemove: Seq[TemporaryRule]): Unit = {
-    if (_temporaryRules.isDefined) {
-      val idsToRemove = temporaryRulesToRemove.flatMap(_.id).toSet
-      _temporaryRules = Some(_temporaryRules.get.filterNot(rule => rule.id.exists(idsToRemove.contains)))
-    }
-  }
-  
-  /**
-   * Convertit un Rule en TwitterRule
-   */
-  def convertRule(rule: models.Rule): TwitterRule = {
-    TwitterRule(
-      Option(rule.id.toString),
-      rule.tag,
-      rule.content,
-      rule.collectName,
-      rule.createdAt
-    )
-  }
-  
-  /**
-   * Convertit un TwitterRule en Rule
-   */
-  def convertToRule(rule: TwitterRule): models.Rule = {
-    val ruleId = rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
-    val newRule = models.Rule(
-      ruleId,
-      rule.tag, 
-      rule.content, 
-      rule.collectName,
-      rule.createdAt
-    )
-    newRule.setActive(rule.isActive)
-    newRule
-  }
-  
-  /**
-   * Méthode spécifique à Twitter pour activer la collecte
-   */
-  def setActive(active: Boolean): Unit = {
-    _isActive = active
-  }
+  override def getTemporaryRules: Option[Seq[TemporaryRule]] = Some(temporaryRules)
 }
 
 /**

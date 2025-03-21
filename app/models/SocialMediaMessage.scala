@@ -3,8 +3,7 @@ package models
 import providers.ProviderType
 import org.joda.time.DateTime
 import play.api.libs.json._
-import play.api.libs.json.JodaReads
-import play.api.libs.json.JodaWrites
+// Import direct de Format sans utiliser JodaReads/JodaWrites
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue}
 
@@ -72,10 +71,15 @@ object SocialMediaMessage {
     def writes(providerType: ProviderType.ProviderType): JsValue = JsString(providerType.toString)
   }
   
-  // Format pour Map[String, String]
-  implicit val mapFormat: Format[Map[String, String]] = Format(
-    Reads.mapReads[String](Reads.StringReads),
-    Writes.mapWrites[String]
+  // Format correct pour Map[String, String]
+  implicit val mapStringFormat: Format[Map[String, String]] = Format(
+    Reads.mapReads[String],
+    new Writes[Map[String, String]] {
+      def writes(map: Map[String, String]): JsValue = {
+        val fields = map.map { case (key, value) => (key, JsString(value)) }
+        JsObject(fields)
+      }
+    }
   )
 
   // Format pour SocialMediaMessage

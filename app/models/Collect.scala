@@ -14,7 +14,14 @@ trait RuleContainer {
 	def temporaryRules: Option[List[TemporaryRule]]
 }
 
-class Collect(val name: String, val directory: String, val accountName: String, val providerType: ProviderType, val isActive: Boolean = false, val createdAt: DateTime = new DateTime()) extends RuleContainer {
+class Collect(
+	val name: String, 
+	val directory: String, 
+	val accountName: String, 
+	val providerType: ProviderType.ProviderType, 
+	val isActive: Boolean = false, 
+	val createdAt: DateTime = new DateTime()
+) extends RuleContainer {
 	private var _rules: Option[List[Rule]] = None
 	private var _temporaryRules: Option[List[TemporaryRule]] = None
 	
@@ -121,12 +128,14 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 	/**
 	 * Fonction copy pour créer une nouvelle instance avec des paramètres modifiés
 	 */
-	def copy(newName: String = this.name, 
-			 newDirectory: String = this.directory, 
-			 newAccountName: String = this.accountName, 
-			 newProviderType: ProviderType = this.providerType,
-			 newIsActive: Boolean = this.isActive,
-			 newCreatedAt: DateTime = this.createdAt): Collect = {
+	def copy(
+		newName: String = this.name, 
+		newDirectory: String = this.directory, 
+		newAccountName: String = this.accountName, 
+		newProviderType: ProviderType.ProviderType = this.providerType,
+		newIsActive: Boolean = this.isActive,
+		newCreatedAt: DateTime = this.createdAt
+	): Collect = {
 		new Collect(newName, newDirectory, newAccountName, newProviderType, newIsActive, newCreatedAt)
 	}
 	

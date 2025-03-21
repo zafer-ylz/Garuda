@@ -1,0 +1,422 @@
+[info] compiling 115 Scala sources and 1 Java source to /app/target/scala-2.13/classes ...
+[error] /app/app/models/SocialAccount.scala:18:21: not found: type ProviderType
+[error]   def providerType: ProviderType
+[error]                     ^
+[error] /app/app/dao/RuleDao.scala:14:19: object tototoshi is not a member of package com.github
+[error] import com.github.tototoshi.slick.MySQLJodaSupport._
+[error]                   ^
+[error] /app/app/controllers/CollectController.scala:92:31: value flatMap is not a member of Long
+[error] 				rulesIds.contains(rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L))
+[error] 				                          ^
+[error] /app/app/controllers/CollectController.scala:123:25: value flatMap is not a member of Long
+[error] 			val ruleId = rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+[error] 			                     ^
+[error] /app/app/services/ProviderManager.scala:34:89: not found: type ProviderType
+[error]   def createCollect(name: String, directory: String, accountName: String, providerType: ProviderType): Collect = {
+[error]                                                                                         ^
+[error] /app/app/models/Account.scala:89:23: not found: type ProviderType
+[error] 	def getProviderType: ProviderType = {
+[error] 	                     ^
+[error] /app/app/controllers/CollectController.scala:227:25: value findByCollectName is not a member of dao.RuleDao
+[error] 			Await.result(ruleDao.findByCollectName(collectName).map { rules =>
+[error] 			                     ^
+[error] /app/app/controllers/CollectController.scala:239:16: value flatMap is not a member of Long
+[error] 							rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+[error] 							        ^
+[error] /app/app/models/Collect.scala:17:99: not found: type ProviderType
+[error] class Collect(val name: String, val directory: String, val accountName: String, val providerType: ProviderType, val isActive: Boolean = false, val createdAt: DateTime = new DateTime()) extends RuleContainer {
+[error]                                                                                                   ^
+[error] /app/app/models/Collect.scala:127:22: not found: type ProviderType
+[error] 			 newProviderType: ProviderType = this.providerType,
+[error] 			                  ^
+[error] /app/app/dao/RuleDao.scala:13:8: object JodaReads is not a member of package play.api.libs.json
+[error] import play.api.libs.json.{JodaReads, JodaWrites}
+[error]        ^
+[error] /app/app/dao/RuleDao.scala:53:70: type mismatch;
+[error]  found   : (Long, String, String, String, org.joda.time.DateTime, Boolean) => models.Rule
+[error]  required: ((Long, String, String, String, org.joda.time.DateTime, Boolean)) => ?
+[error]     def * = (id, ruleTag, content, collect, createdAt, isActive) <> (toRule, fromRule)
+[error]                                                                      ^
+[error] /app/app/dao/TemporaryRuleDao.scala:47:69: type mismatch;
+[error]  found   : (Option[Long], String, String, String, org.joda.time.DateTime) => models.TemporaryRule
+[error]  required: ((Option[Long], String, String, String, org.joda.time.DateTime)) => ?
+[error] 		override def * = (id.?, ruleTag, content, collect, createdAt) <> (toTemporaryRule, fromTemporaryRule)
+[error] 		                                                                  ^
+[error] /app/app/models/BaseAccount.scala:23:21: not found: type ProviderType
+[error]   def providerType: ProviderType
+[error]                     ^
+[error] /app/app/models/SocialAccount.scala:110:24: not found: type ProviderType
+[error]   def getProviderType: ProviderType = providerType
+[error]                        ^
+[error] /app/app/models/SocialCollect.scala:28:21: not found: type ProviderType
+[error]   def providerType: ProviderType
+[error]                     ^
+[error] /app/app/models/SocialMediaAccount.scala:8:17: not found: type ProviderType
+[error]   providerType: ProviderType,
+[error]                 ^
+[error] /app/app/models/SocialMediaCollect.scala:10:17: not found: type ProviderType
+[error]   providerType: ProviderType,
+[error]                 ^
+[error] /app/app/models/SocialMediaMessage.scala:6:8: object JodaReads is not a member of package play.api.libs.json
+[error] import play.api.libs.json.JodaReads
+[error]        ^
+[error] /app/app/models/SocialMediaMessage.scala:7:8: object JodaWrites is not a member of package play.api.libs.json
+[error] import play.api.libs.json.JodaWrites
+[error]        ^
+[error] /app/app/models/SocialMediaMessage.scala:78:21: type mismatch;
+[error]  found   : play.api.libs.json.OWrites[play.api.libs.json.MapWrites.Map[String,String]]
+[error]     (which expands to)  play.api.libs.json.OWrites[scala.collection.MapOps[String,String,[X, +Y]scala.collection.IterableOps[_, [X]Any, _],Any]]
+[error]  required: play.api.libs.json.Writes[Map[String,String]]
+[error] Note: play.api.libs.json.MapWrites.Map[String,String] >: Map[String,String], but trait Writes is invariant in type A.
+[error] You may wish to define A as -A instead. (SLS 4.5)
+[error]     Writes.mapWrites[String]
+[error]                     ^
+[error] /app/app/models/bluesky/BlueskyAccount.scala:21:30: not found: type ProviderType
+[error]   override def providerType: ProviderType = ProviderType.Bluesky
+[error]                              ^
+[error] /app/app/providers/ProviderRegistry.scala:41:33: not found: type ProviderType
+[error]   def getProvider(providerType: ProviderType): Option[SocialMediaProvider] = {
+[error]                                 ^
+[error] /app/app/models/bluesky/BlueskyAccount.scala:41:49: type mismatch;
+[error]  found   : models.SocialCollect
+[error]  required: models.SocialMediaCollect
+[error]           blueskyProvider.startCollect(account, collect) match {
+[error]                                                 ^
+[error] /app/app/models/bluesky/BlueskyAccount.scala:43:67: type mismatch;
+[error]  found   : Any
+[error]  required: providers.StreamingConnection
+[error]               val adaptedConnection = new BlueskyStreamConnection(connection, collect)
+[error]                                                                   ^
+[error] /app/app/models/bluesky/BlueskyAccount.scala:47:20: type mismatch;
+[error]  found   : Any
+[error]  required: String
+[error]               Left(error)
+[error]                    ^
+[error] /app/app/models/bluesky/BlueskyAccount.scala:144:24: not found: type ProviderType
+[error]   def getProviderType: ProviderType = providerType
+[error]                        ^
+[error] /app/app/models/bluesky/BlueskyCollect.scala:20:30: not found: type ProviderType
+[error]   override def providerType: ProviderType = ProviderType.Bluesky
+[error]                              ^
+[error] /app/app/models/tweet/Tweet.scala:99:17: type mismatch;
+[error]  found   : Integer
+[error]  required: String
+[error] 					Option(url.getStatus), Option(url.getTitle), Option(url.getDescription))
+[error] 					           ^
+[error] /app/app/models/tweet/Tweet.scala:129:63: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val key: Option[String] = GetJson.optionString(mediaJson \ "media_key")
+[error] 					                                                         ^
+[error] /app/app/models/tweet/Tweet.scala:130:69: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val mediaType: Option[String] = GetJson.optionString(mediaJson \ "type")
+[error] 					                                                               ^
+[error] /app/app/models/tweet/Tweet.scala:131:63: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val url: Option[String] = GetJson.optionString(mediaJson \ "url")
+[error] 					                                                         ^
+[error] /app/app/models/tweet/Tweet.scala:132:64: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val durationMs: Option[Int] = GetJson.optionInt(mediaJson \ "duration_ms")
+[error] 					                                                          ^
+[error] /app/app/models/tweet/Tweet.scala:133:60: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val height: Option[Int] = GetJson.optionInt(mediaJson \ "height")
+[error] 					                                                      ^
+[error] /app/app/models/tweet/Tweet.scala:134:59: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val width: Option[Int] = GetJson.optionInt(mediaJson \ "width")
+[error] 					                                                     ^
+[error] /app/app/models/tweet/Tweet.scala:135:70: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val previewUrl: Option[String] = GetJson.optionString(mediaJson \ "preview_image_url")
+[error] 					                                                                ^
+[error] /app/app/models/tweet/Tweet.scala:136:82: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val viewCount: Option[Int] = GetJson.optionInt(mediaJson \ "public_metrics" \ "view_count")
+[error] 					                                                                            ^
+[error] /app/app/models/tweet/Tweet.scala:137:67: type mismatch;
+[error]  found   : play.api.libs.json.JsLookupResult
+[error]  required: play.api.libs.json.JsValue
+[error] 					val altText: Option[String] = GetJson.optionString(mediaJson \ "alt_text")
+[error] 					                                                             ^
+[error] /app/app/models/tweet/TweetEntities.scala:85:53: type mismatch;
+[error]  found   : com.twitter.clientlib.model.PlaceType
+[error]  required: String
+[error]   lazy val placeType: Option[String] = Option(place.getPlaceType)
+[error]                                                     ^
+[error] /app/app/models/tweet/User.scala:27:59: type mismatch;
+[error]  found   : java.net.URL
+[error]  required: String
+[error] 	lazy val profile_image_url: Option[String] = Option(user.getProfileImageUrl)
+[error] 	                                                         ^
+[error] /app/app/models/tweet/User.scala:28:60: value getProfileBannerUrl is not a member of com.twitter.clientlib.model.User
+[error] 	lazy val profile_banner_url: Option[String] = Option(user.getProfileBannerUrl)
+[error] 	                                                          ^
+[error] /app/app/models/tweet/User.scala:39:22: value atZone is not a member of java.time.OffsetDateTime
+[error] 		val instant = date.atZone(ZoneId.systemDefault()).toInstant()
+[error] 		                   ^
+[error] /app/app/models/twitter/TwitterAccount.scala:169:76: not enough arguments for constructor Account: (name: String, accountType: models.AccountType, bearerToken: String): models.Account.
+[error] Unspecified value parameters name, accountType, bearerToken.
+[error] class TwitterAccountAdapter(twitterAccount: TwitterAccount) extends models.Account {
+[error]                                                                            ^
+[error] /app/app/models/twitter/TwitterCollect.scala:23:30: not found: type ProviderType
+[error]   override def providerType: ProviderType = ProviderType.Twitter
+[error]                              ^
+[error] /app/app/modules/Module.scala:19:30: not found: type ProviderType
+[error] 	def supportedProviders: Seq[ProviderType]
+[error] 	                            ^
+[error] /app/app/modules/Module.scala:24:37: not found: type ProviderType
+[error] 	def supportsProvider(providerType: ProviderType): Boolean = 
+[error] 	                                   ^
+[error] /app/app/modules/ModulePlugin.scala:28:31: not found: type ProviderType
+[error]   def supportedProviders: Seq[ProviderType]
+[error]                               ^
+[error] /app/app/modules/ModulePluginRegistry.scala:61:43: not found: type ProviderType
+[error]   def getPluginsForProvider(providerType: ProviderType): Seq[ModulePlugin] = {
+[error]                                           ^
+[error] /app/app/modules/ModuleRegistry.scala:43:43: not found: type ProviderType
+[error]   def getModulesForProvider(providerType: ProviderType): Seq[ModuleDefinition] = {
+[error]                                           ^
+[error] /app/app/modules/ModuleRegistry.scala:98:27: not found: type ProviderType
+[error]   supportedProviders: Seq[ProviderType],
+[error]                           ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:128:12: value createdAt is not a member of models.tweet.User
+[error] did you mean created_at?
+[error] 			'${user.createdAt.getOrElse("")}',
+[error] 			        ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:130:11: value protected is not a member of models.tweet.User
+[error] 			${user.`protected`.getOrElse(false)})
+[error] 			       ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:162:23: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 			'${escapeSQL(place.name)}',
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:163:23: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 			'${escapeSQL(place.fullName)}',
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:164:23: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 			'${escapeSQL(place.countryCode)}',
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:165:23: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 			'${escapeSQL(place.country)}',
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:166:23: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 			'${escapeSQL(place.placeType)}',
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:167:23: type mismatch;
+[error]  found   : Array[models.tweet.Place.Coordinates]
+[error]  required: String
+[error] 			'${escapeSQL(place.boundingBox)}',
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:168:23: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 			'${escapeSQL(place.typeBoundingBox)}')
+[error] 			                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:250:26: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(urls(i).url)}',
+[error] 				                     ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:251:26: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(urls(i).expandedUrl)}',
+[error] 				                     ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:252:26: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(urls(i).displayUrl)}',
+[error] 				                     ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:363:33: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(annotations(i).annotationType)}',
+[error] 				                            ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:364:33: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 				'${escapeSQL(annotations(i).normalizedText)}',
+[error] 				                            ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:427:41: value getOrElse is not a member of scala.collection.immutable.Iterable[String]
+[error] 				'${message.metadata.map(_.toString).getOrElse("{}")}')
+[error] 				                                    ^
+[error] /app/app/modules/exporter/postgresql/PostgresFileListener.scala:34:42: value asScala is not a member of java.util.List[java.nio.file.WatchEvent[_]]
+[error]           for (event <- key.pollEvents().asScala) {
+[error]                                          ^
+[error] /app/app/modules/exporter/postgresql/PostgresFileReader.scala:21:18: type mismatch;
+[error]  found   : String("twitter")
+[error]  required: providers.ProviderType.ProviderType
+[error]     (which expands to)  providers.ProviderType.Value
+[error]             case "twitter" =>
+[error]                  ^
+[error] /app/app/modules/exporter/postgresql/PostgresFileReader.scala:23:18: type mismatch;
+[error]  found   : String("bluesky")
+[error]  required: providers.ProviderType.ProviderType
+[error]     (which expands to)  providers.ProviderType.Value
+[error]             case "bluesky" =>
+[error]                  ^
+[error] /app/app/modules/exporter/postgresql/PostgresModule.scala:25:58: value observableFile is not a member of models.SocialCollect
+[error] 	private val listener = new PostgresFileListener(collect.observableFile, config, this)
+[error] 	                                                        ^
+[error] /app/app/modules/exporter/postgresql/PostgresModule.scala:34:15: value filesProcessed is not a member of modules.exporter.postgresql.PostgresConfig
+[error] 		f => config.filesProcessed.exists(
+[error] 		            ^
+[error] /app/app/modules/exporter/postgresql/PostgresModule.scala:66:39: not found: type ProviderType
+[error] 	override def supportedProviders: Seq[ProviderType] = Seq(ProviderType.Twitter, ProviderType.Bluesky)
+[error] 	                                     ^
+[error] /app/app/providers/ProviderException.scala:7:57: not found: type ProviderType
+[error] case class ProviderNotRegisteredException(providerType: ProviderType) 
+[error]                                                         ^
+[error] /app/app/providers/ProviderException.scala:12:52: not found: type ProviderType
+[error] case class ProviderCreationException(providerType: ProviderType, cause: Throwable)
+[error]                                                    ^
+[error] /app/app/providers/ProviderRegistry.scala:21:19: not found: type ProviderType
+[error]     providerType: ProviderType,
+[error]                   ^
+[error] /app/app/providers/ProviderInitializer.scala:14:17: not found: type TwitterProvider
+[error]       () => new TwitterProvider()
+[error]                 ^
+[error] /app/app/providers/ProviderInitializer.scala:20:17: not found: type BlueskyProvider
+[error]       () => new BlueskyProvider()
+[error]                 ^
+[error] /app/app/providers/ProviderRegistry.scala:12:38: not found: type ProviderType
+[error]   private val providers: mutable.Map[ProviderType, SocialMediaProvider] = mutable.Map.empty
+[error]                                      ^
+[error] /app/app/providers/ProviderRegistry.scala:15:49: not found: type ProviderType
+[error]   private val providerConstructors: mutable.Map[ProviderType, () => SocialMediaProvider] = mutable.Map.empty
+[error]                                                 ^
+[error] /app/app/providers/ProviderRegistry.scala:32:44: not found: type ProviderType
+[error]   private def createProvider(providerType: ProviderType): Option[SocialMediaProvider] = {
+[error]                                            ^
+[error] /app/app/providers/ProviderRegistry.scala:43:32: type mismatch;
+[error]  found   : providers.SocialMediaProvider
+[error]  required: Option[providers.SocialMediaProvider]
+[error]       providers.getOrElseUpdate(providerType, {
+[error]                                ^
+[error] /app/app/providers/ProviderRegistry.scala:54:32: not found: type ProviderType
+[error]   def registeredProviders: Set[ProviderType] = {
+[error]                                ^
+[error] /app/app/providers/ProviderRegistry.scala:63:42: not found: type ProviderType
+[error]   def isProviderRegistered(providerType: ProviderType): Boolean = {
+[error]                                          ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:7:12: object atproto is not a member of package com
+[error] import com.atproto.{Client, ClientBuilder}
+[error]            ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:8:12: object atproto is not a member of package com
+[error] import com.atproto.server.CreateSessionRequest
+[error]            ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:9:12: object atproto is not a member of package com
+[error] import com.atproto.server.CreateSessionResponse
+[error]            ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:10:12: object atproto is not a member of package com
+[error] import com.atproto.server.RefreshSessionResponse
+[error]            ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:11:12: object atproto is not a member of package com
+[error] import com.atproto.server.Session
+[error]            ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:12:12: object atproto is not a member of package com
+[error] import com.atproto.server.SessionManager
+[error]            ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:13:17: object cache is not a member of package play.api
+[error] import play.api.cache.AsyncCacheApi
+[error]                 ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:20:66: not found: type AsyncCacheApi
+[error] class BlueskyConnection @Inject()(account: SocialAccount, cache: AsyncCacheApi) extends Logging {
+[error]                                                                  ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:21:30: not found: type Client
+[error]   private var client: Option[Client] = None
+[error]                              ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:22:31: not found: type Session
+[error]   private var session: Option[Session] = None
+[error]                               ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:35:49: value getIdentifier is not a member of models.SocialAccount
+[error]         val cacheKey = s"$CACHE_PREFIX${account.getIdentifier}"
+[error]                                                 ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:36:39: not found: type Session
+[error]         val cachedSession = cache.get[Session](cacheKey)
+[error]                                       ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:44:32: not found: value ClientBuilder
+[error]           val clientInstance = ClientBuilder.create()
+[error]                                ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:50:75: value getIdentifier is not a member of models.SocialAccount
+[error]           logger.info(s"Session Bluesky récupérée du cache pour ${account.getIdentifier}")
+[error]                                                                           ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:54:32: not found: value ClientBuilder
+[error]           val clientInstance = ClientBuilder.create()
+[error]                                ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:71:71: value getIdentifier is not a member of models.SocialAccount
+[error]           logger.info(s"Nouvelle session Bluesky créée pour ${account.getIdentifier}")
+[error]                                                                       ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:91:36: not found: type SessionManager
+[error]           val sessionManager = new SessionManager(client.get)
+[error]                                    ^
+[error] /app/app/providers/bluesky/BlueskyConnection.scala:95:51: value getIdentifier is not a member of models.SocialAccount
+[error]           val cacheKey = s"$CACHE_PREFIX${account.getIdentifier}"
+[error]                                                   ^
+[error] 100 errors found
+[error] (Compile / compileIncremental) Compilation failed
+2025-03-21 15:20:37 ERROR play.api.http.DevHttpErrorHandler  
+
+! @88oo0hdf4 - Internal server error, for (GET) [/] ->
+ 
+play.sbt.PlayExceptions$CompilationException: Compilation error[not found: type ProviderType]
+	at play.sbt.PlayExceptions$CompilationException$.apply(PlayExceptions.scala:34)
+	at play.sbt.PlayExceptions$CompilationException$.apply(PlayExceptions.scala:34)
+	at scala.Option.map(Option.scala:230)
+	at play.sbt.run.PlayReload$.$anonfun$taskFailureHandler$8(PlayReload.scala:131)
+	at scala.Option.map(Option.scala:230)
+	at play.sbt.run.PlayReload$.taskFailureHandler(PlayReload.scala:104)
+	at play.sbt.run.PlayReload$.compileFailure(PlayReload.scala:38)
+	at play.sbt.run.PlayReload$.$anonfun$compile$3(PlayReload.scala:156)
+	at scala.util.Either$LeftProjection.map(Either.scala:573)
+	at play.sbt.run.PlayReload$.compile(PlayReload.scala:156)
+	at play.sbt.run.PlayRun$.$anonfun$playRunTask$4(PlayRun.scala:80)
+	at play.runsupport.Reloader.$anonfun$reload$1(Reloader.scala:496)
+	at play.runsupport.Reloader$$anon$1.run(Reloader.scala:57)
+	at java.base/java.security.AccessController.doPrivileged(Native Method)
+	at play.runsupport.Reloader$.play$runsupport$Reloader$$withReloaderContextClassLoader(Reloader.scala:63)
+	at play.runsupport.Reloader.reload(Reloader.scala:496)
+	at play.core.server.DevServerStart$$anon$1.get(DevServerStart.scala:147)
+	at play.core.server.AkkaHttpServer.handleRequest(AkkaHttpServer.scala:308)
+	at play.core.server.AkkaHttpServer.$anonfun$createServerBinding$1(AkkaHttpServer.scala:225)
+	at akka.stream.impl.fusing.MapAsync$$anon$30.onPush(Ops.scala:1309)
+	at akka.stream.impl.fusing.GraphInterpreter.processPush(GraphInterpreter.scala:542)
+	at akka.stream.impl.fusing.GraphInterpreter.processEvent(GraphInterpreter.scala:496)
+	at akka.stream.impl.fusing.GraphInterpreter.execute(GraphInterpreter.scala:390)
+	at akka.stream.impl.fusing.GraphInterpreterShell.runBatch(ActorGraphInterpreter.scala:650)
+	at akka.stream.impl.fusing.GraphInterpreterShell$AsyncInput.execute(ActorGraphInterpreter.scala:521)
+	at akka.stream.impl.fusing.GraphInterpreterShell.processEvent(ActorGraphInterpreter.scala:625)
+	at akka.stream.impl.fusing.ActorGraphInterpreter.akka$stream$impl$fusing$ActorGraphInterpreter$$processEvent(ActorGraphInterpreter.scala:800)
+	at akka.stream.impl.fusing.ActorGraphInterpreter$$anonfun$receive$1.applyOrElse(ActorGraphInterpreter.scala:818)
+	at akka.actor.Actor.aroundReceive(Actor.scala:537)
+	at akka.actor.Actor.aroundReceive$(Actor.scala:535)
+	at akka.stream.impl.fusing.ActorGraphInterpreter.aroundReceive(ActorGraphInterpreter.scala:716)
+	at akka.actor.ActorCell.receiveMessage(ActorCell.scala:579)
+	at akka.actor.ActorCell.invoke(ActorCell.scala:547)
+	at akka.dispatch.Mailbox.processMailbox(Mailbox.scala:270)
+	at akka.dispatch.Mailbox.run(Mailbox.scala:231)
+	at akka.dispatch.Mailbox.exec(Mailbox.scala:243)
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:290)
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1020)
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1656)
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1594)
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:183)

@@ -44,7 +44,7 @@ class TemporaryRuleDao @Inject() (protected val dbConfigProvider: DatabaseConfig
 			Some((rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt))
 		}
 		
-		override def * = (id.?, ruleTag, content, collect, createdAt) <> (toTemporaryRule, fromTemporaryRule)
+		override def * = (id.?, ruleTag, content, collect, createdAt) <> ((toTemporaryRule _).tupled, fromTemporaryRule)
 	}
 	
 	private val rules = TableQuery[TemporaryRulesTable]
@@ -53,38 +53,25 @@ class TemporaryRuleDao @Inject() (protected val dbConfigProvider: DatabaseConfig
 	def all(): Future[Seq[TemporaryRule]] = db.run(rules.result)
 	
 	/** Retrieve a rule from the id */
-	def findById(id: Long): Future[Option[TemporaryRule]] =
-		db.run(rules.filter(_.id === id).result.headOption)
+	def findById(id: Long): Future[Option[TemporaryRule]] = db.run(rules.filter(_.id === id).result.headOption)
 	
-	/** Retrieve rules from the collect name */
-	def findByCollectName(name: String): Future[Seq[TemporaryRule]] =
-		db.run(rules.filter(_.collect === name).result)
-	
-	private val insertQuery = rules returning rules.map(_.id) into ((rule, id) => rule.copy(id = Some(id)))
+	/** Retrieve all the collect rules */
+	def findByCollectName(collectName: String): Future[Seq[TemporaryRule]] = db.run(rules.filter(_.collect === collectName).result)
 	
 	/** Insert a new rule */
-	def insert(rule: TemporaryRule): Future[TemporaryRule] = db.run(insertQuery += rule)//.map { id => rule.copy(id = Some(id)) }
-	
-	private def rulesAutoIncWithObject =
-		(rules returning rules.map(_.id)).into((rule, id) => rule.copy(id = Some(id)))
-	
-	/** Insert new rules */
-	def batchInsert(newRules: Seq[TemporaryRule]): Future[Seq[TemporaryRule]] = {
-		db.run { rulesAutoIncWithObject ++= newRules }
-	}
-	
-	/** Update a rule */
-	def update(id: Long, rule: TemporaryRule): Future[Unit] = {
-		val ruleToUpdate: TemporaryRule = rule.copy(Some(id))
-		db.run(rules.filter(_.id === id).update(ruleToUpdate)).map(_ => ())
+	def insert(temporaryRule: TemporaryRule): Future[TemporaryRule] = {
+		val insertQuery = rules returning rules.map(_.id) into ((temporaryRule, id) => temporaryRule.copy(id = Some(id)))
+		db.run(insertQuery += temporaryRule)
 	}
 	
 	/** Delete a rule */
-	def delete(id: Long): Future[Unit] =
-		db.run(rules.filter(_.id === id).delete).map(_ => ())
-		
-	/** Delete a set of rules */
-	def batchDelete(ids: Seq[Long]): Future[Unit] = {
-		db.run(rules.filter(_.id.inSet(ids)).delete).map(_ => ())
+	def delete(id: Long): Future[Int] = db.run(rules.filter(_.id === id).delete)
+	
+	/** Delete rules */
+	def batchDelete(ids: Seq[Long]): Future[Int] = db.run(rules.filter(_.id inSet ids).delete)
+	
+	/** Delete all the collect rules */
+	def deleteByCollectName(collectName: String): Future[Int] = {
+		db.run(rules.filter(_.collect === collectName).delete)
 	}
 }

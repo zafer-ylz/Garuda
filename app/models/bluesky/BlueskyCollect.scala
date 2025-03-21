@@ -1,74 +1,102 @@
 package models.bluesky
 
-import models.SocialCollect
-import providers.{ProviderType, SocialMediaRule}
+import models.{SocialCollect, TemporaryRule}
 import org.joda.time.DateTime
-import java.io.File
+import providers.{ProviderType, SocialMediaRule}
+import providers.bluesky.BlueskyRule
+
+import scala.collection.mutable.ListBuffer
 
 /**
- * Implémentation d'une collecte Bluesky.
+ * Implémentation de SocialCollect pour Bluesky
  */
-case class BlueskyCollect(
+class BlueskyCollect(
   override val name: String,
   override val directory: String,
   override val accountName: String,
-  override val createdAt: DateTime = DateTime.now()
+  override val isActive: Boolean = false,
+  override val createdAt: DateTime = new DateTime()
 ) extends SocialCollect {
-  private var rules: Seq[SocialMediaRule] = Seq.empty
-  private var _isActive: Boolean = false
   
-  override def providerType: ProviderType = ProviderType.Bluesky
+  override def providerType: ProviderType.ProviderType = ProviderType.Bluesky
   
-  override def isActive: Boolean = _isActive
+  // Variables pour stockage des données
+  private val rules = new ListBuffer[BlueskyRule]()
+  private var temporaryRules = List.empty[TemporaryRule]
+  private var active: Boolean = isActive
   
-  override def activeRules: Seq[SocialMediaRule] = {
-    rules.filter(_.isActive)
-  }
-  
-  override def nonActiveRules: Seq[SocialMediaRule] = {
-    rules.filterNot(_.isActive)
-  }
-  
-  override def initRules(newRules: Seq[SocialMediaRule]): Unit = {
-    this.rules = newRules
-  }
-  
-  override def addRule(rule: SocialMediaRule): Boolean = {
-    rules = rules :+ rule
-    true
-  }
-  
-  override def addRules(newRules: Seq[SocialMediaRule]): Boolean = {
-    rules = rules ++ newRules
-    true
-  }
-  
-  override def removeRules(rulesToRemove: Seq[SocialMediaRule]): Boolean = {
-    val rulesToRemoveIds = rulesToRemove.flatMap(_.id).toSet
-    rules = rules.filterNot(rule => rule.id.exists(rulesToRemoveIds.contains))
-    true
-  }
-  
-  override def close(): Unit = {
-    _isActive = false
+  /**
+   * Convertit une règle du modèle général au modèle spécifique à Bluesky
+   */
+  def convertRule(rule: models.Rule): BlueskyRule = {
+    new BlueskyRule(
+      Some(rule.id),
+      rule.tag,
+      rule.content,
+      rule.collectName,
+      rule.createdAt
+    )
   }
   
   /**
-   * Méthode spécifique à Bluesky pour activer la collecte
+   * Initialise les règles de la collecte
    */
-  def setActive(active: Boolean): Unit = {
-    _isActive = active
+  def initRules(newRules: List[SocialMediaRule]): Unit = {
+    rules.clear()
+    rules ++= newRules.collect { case r: BlueskyRule => r }
+  }
+  
+  /**
+   * Définit les règles temporaires
+   */
+  def setTemporaryRules(newRules: List[TemporaryRule]): Unit = {
+    temporaryRules = newRules
+  }
+  
+  /**
+   * Ajoute une règle à la collecte
+   */
+  def addRule(rule: BlueskyRule): Boolean = {
+    rules += rule
+    true
+  }
+  
+  /**
+   * Supprime des règles de la collecte
+   */
+  def removeRules(rulesToRemove: List[BlueskyRule]): Boolean = {
+    val idsToRemove = rulesToRemove.flatMap(_.id).toSet
+    rules --= rules.filter(r => r.id.exists(idsToRemove.contains))
+    true
+  }
+  
+  /**
+   * Renvoie les règles actives
+   */
+  def activeRules: List[BlueskyRule] = rules.filter(_.isActive).toList
+  
+  override def isActive: Boolean = active
+  
+  override def setActive(newActive: Boolean): Unit = {
+    this.active = newActive
+  }
+  
+  /**
+   * Ferme la collecte
+   */
+  override def close(): Unit = {
+    active = false
   }
   
   /**
    * Méthode spécifique à Bluesky pour obtenir le fichier de sortie
    */
-  def getOutputFile: File = {
-    val dir = new File(directory)
+  def getOutputFile: java.io.File = {
+    val dir = new java.io.File(directory)
     if (!dir.exists()) {
       dir.mkdirs()
     }
-    new File(dir, s"$name-${createdAt.toString("yyyyMMdd-HHmmss")}.json")
+    new java.io.File(dir, s"$name-${createdAt.toString("yyyyMMdd-HHmmss")}.json")
   }
 }
 

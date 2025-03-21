@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 import models.{SocialAccount, SocialCollect, Collect}
-import providers.{ProviderType, SocialMediaRule}
+import providers.ProviderType
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -11,7 +11,7 @@ class ProviderManager @Inject()(implicit executionContext: ExecutionContext) {
   /**
    * Crée une instance de SocialAccount en fonction du type de provider
    */
-  def createAccount(name: String, providerType: ProviderType, credentials: Map[String, String]): SocialAccount = {
+  def createAccount(name: String, providerType: ProviderType.ProviderType, credentials: Map[String, String]): SocialAccount = {
     providerType match {
       case ProviderType.Twitter => 
         new TwitterAccount(name, credentials("bearerToken"))
@@ -31,7 +31,7 @@ class ProviderManager @Inject()(implicit executionContext: ExecutionContext) {
    * @param providerType Type de provider
    * @return Une instance de Collect configurée pour le provider spécifié
    */
-  def createCollect(name: String, directory: String, accountName: String, providerType: ProviderType): Collect = {
+  def createCollect(name: String, directory: String, accountName: String, providerType: ProviderType.ProviderType): Collect = {
     // Crée une instance de la nouvelle classe Collect avec le provider approprié
     new Collect(name, directory, accountName, providerType)
   }

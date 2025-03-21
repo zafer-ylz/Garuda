@@ -25,7 +25,12 @@ trait SocialCollect {
   /**
    * Type de provider utilisé pour cette collecte
    */
-  def providerType: ProviderType
+  def providerType: ProviderType.ProviderType
+  
+  /**
+   * Obtient le type de provider (pour rétrocompatibilité)
+   */
+  def getProviderType: ProviderType.ProviderType = providerType
   
   /**
    * Date de création de la collecte
@@ -46,6 +51,11 @@ trait SocialCollect {
    * Vérifie si la collecte est active
    */
   def isActive: Boolean
+  
+  /**
+   * Active ou désactive la collecte
+   */
+  def setActive(active: Boolean): Unit
   
   /**
    * Initialise les règles pour cette collecte
@@ -70,7 +80,7 @@ trait SocialCollect {
   /**
    * Ferme la collecte (arrête la collecte de données)
    */
-  def close(): Unit
+  def close(): Unit = { setActive(false) }
   
   /**
    * Obtient les règles temporaires

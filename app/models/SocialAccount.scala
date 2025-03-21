@@ -15,7 +15,7 @@ trait SocialAccount {
   /**
    * Type du provider (Twitter, Bluesky, etc.)
    */
-  def providerType: ProviderType
+  def providerType: ProviderType.ProviderType
   
   /**
    * Date de création du compte
@@ -107,7 +107,7 @@ trait SocialAccount {
   /**
    * Obtient le type de provider
    */
-  def getProviderType: ProviderType = providerType
+  def getProviderType: ProviderType.ProviderType = providerType
   
   /**
    * Obtient la longueur maximale de règle autorisée pour ce compte

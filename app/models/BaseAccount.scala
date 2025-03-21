@@ -20,7 +20,7 @@ abstract class BaseAccount extends SocialAccount {
   /**
    * Type de provider associé à ce compte
    */
-  def providerType: ProviderType
+  def providerType: ProviderType.ProviderType
   
   /**
    * Vérifie si le compte a une collecte active

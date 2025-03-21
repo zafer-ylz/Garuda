@@ -10,8 +10,6 @@ import org.joda.time.DateTime
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import play.api.libs.json.{JodaReads, JodaWrites}
-import com.github.tototoshi.slick.MySQLJodaSupport._
 
 /**
  * DAO pour les règles de collecte
@@ -50,7 +48,7 @@ class RuleDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
       Some((rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt, rule.isActive))
     }
     
-    def * = (id, ruleTag, content, collect, createdAt, isActive) <> (toRule, fromRule)
+    def * = (id, ruleTag, content, collect, createdAt, isActive) <> ((toRule _).tupled, fromRule)
   }
 
   private val rules = TableQuery[RuleTable]
@@ -70,6 +68,12 @@ class RuleDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
    */
   def findByCollect(collectName: String): Future[Seq[Rule]] = 
     db.run(rules.filter(_.collect === collectName).result)
+
+  /**
+   * Récupère toutes les règles pour un nom de collecte
+   */
+  def findByCollectName(collectName: String): Future[Seq[Rule]] = 
+    findByCollect(collectName)
 
   /**
    * Insère une nouvelle règle

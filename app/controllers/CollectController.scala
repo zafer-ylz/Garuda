@@ -89,10 +89,23 @@ class CollectController @Inject()(
 			
 			// Conversion de SocialMediaRule à Rule
 			val rulesToRemove = account.activeRules.filter(rule => {
-				rulesIds.contains(rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L))
+				val ruleId = rule.id.flatMap(s => 
+					try { 
+						Some(s.toLong) 
+					} catch { 
+						case _: NumberFormatException => None 
+					}
+				).getOrElse(-1L)
+				rulesIds.contains(ruleId)
 			})
 				.map(r => {
-					val id = r.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+					val id = r.id.flatMap(s => 
+						try { 
+							Some(s.toLong) 
+						} catch { 
+							case _: NumberFormatException => None 
+						}
+					).getOrElse(-1L)
 					val rule = new Rule(id, r.tag, r.content, r.collectName, r.createdAt)
 					rule.setActive(r.isActive)
 					rule
@@ -120,7 +133,13 @@ class CollectController @Inject()(
 		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
 		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
 		val newNonActiveRules = collect.activeRules.filter(rule => {
-			val ruleId = rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+			val ruleId = rule.id.flatMap(s => 
+				try { 
+					Some(s.toLong) 
+				} catch { 
+					case _: NumberFormatException => None 
+				}
+			).getOrElse(-1L)
 			newNonActiveIdRules.contains(ruleId)
 		})
 		
@@ -236,7 +255,14 @@ class CollectController @Inject()(
 					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
 						val activeIds = account.activeRules.map(rule => {
-							rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+							val ruleId = rule.id.flatMap(s => 
+								try { 
+									Some(s.toLong) 
+								} catch { 
+									case _: NumberFormatException => None 
+								}
+							).getOrElse(-1L)
+							ruleId
 						})
 						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id)))
 					}
