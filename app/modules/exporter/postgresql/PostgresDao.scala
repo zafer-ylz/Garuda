@@ -123,11 +123,11 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			protected)
 		VALUES(
 			'${user.id.get}',
-			'${escapeSQL(user.screenName)}',
-			'${escapeSQL(user.name)}',
-			'${user.createdAt}',
-			${user.verified},
-			${user.protected})
+			'${user.screenName.map(escapeSQL).getOrElse("")}',
+			'${user.name.map(escapeSQL).getOrElse("")}',
+			'${user.createdAt.getOrElse("")}',
+			${user.verified.getOrElse(false)},
+			${user.`protected`.getOrElse(false)})
 		ON CONFLICT (id) DO NOTHING"""
 		
 		multiInsertions.stmt.addBatch(sql)
