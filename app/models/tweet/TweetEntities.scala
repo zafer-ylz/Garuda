@@ -11,7 +11,7 @@ case class Hashtag(
 case class Cashtag(
   start: Option[Int], 
   end: Option[Int], 
-  tag: Option[String]
+  text: Option[String]
 )
 
 // Url représente une URL partagée dans un tweet
@@ -39,7 +39,7 @@ case class Annotation(
   start: Option[Int], 
   end: Option[Int], 
   probability: Option[Double], 
-  type_: Option[String], 
+  annotationType: Option[String], 
   normalizedText: Option[String]
 )
 
@@ -83,4 +83,23 @@ case class Place(
   lazy val country: Option[String] = Option(place.getCountry)
   lazy val countryCode: Option[String] = Option(place.getCountryCode)
   lazy val placeType: Option[String] = Option(place.getPlaceType)
+  lazy val fullName: Option[String] = Option(place.getFullName)
+  lazy val typeBoundingBox: Option[String] = if (place.getGeo != null && place.getGeo.getType != null) {
+    Option(place.getGeo.getType.getValue)
+  } else {
+    None
+  }
+  lazy val boundingBox: Array[Place.Coordinates] = if (place.getGeo != null && place.getGeo.getBbox != null) {
+    place.getGeo.getBbox.asScala.grouped(2).map(point => 
+      Place.Coordinates(point(0).toString, point(1).toString)
+    ).toArray
+  } else {
+    Array.empty[Place.Coordinates]
+  }
+}
+
+// Objet companion pour Place
+object Place {
+  // Coordonnées géographiques (longitude, latitude)
+  case class Coordinates(longitude: String, latitude: String)
 } 

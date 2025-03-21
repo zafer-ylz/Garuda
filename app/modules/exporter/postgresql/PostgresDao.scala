@@ -95,17 +95,17 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			possibly_sensitive)
 		VALUES(
 			'${tweet.id.get}',
-			'${tweet.createdAt}',
-			${tweet.publishedTime},
-			'${tweet.userId.get}',
-			'${escapeSQL(tweet.userName)}',
-			'${escapeSQL(tweet.userScreenName)}',
-			'${escapeSQL(tweet.text)}',
-			'${escapeSQL(tweet.source)}',
-			'${escapeSQL(tweet.language)}',
-			'${tweet.coordinates.map(_.longitude).getOrElse("")}',
-			'${tweet.coordinates.map(_.latitude).getOrElse("")}',
-			${tweet.possiblySensitive})
+			'${tweet.createdAt.getOrElse("")}',
+			${tweet.publishedTimeMs.getOrElse("NULL")},
+			'${tweet.userId.getOrElse("")}',
+			'${escapeSQL(tweet.user.flatMap(_.name).getOrElse(""))}',
+			'${escapeSQL(tweet.user.flatMap(_.screenName).getOrElse(""))}',
+			'${escapeSQL(tweet.text.getOrElse(""))}',
+			'${escapeSQL(tweet.source.getOrElse(""))}',
+			'${escapeSQL(tweet.lang.getOrElse(""))}',
+			'${tweet.longitude.getOrElse("")}',
+			'${tweet.latitude.getOrElse("")}',
+			${tweet.possiblySensitive.getOrElse(false)})
 		ON CONFLICT (id) DO NOTHING"""
 		
 		multiInsertions.stmt.addBatch(sql)
@@ -222,9 +222,9 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${escapeSQL(hashtags(i).text)}',
-				${hashtags(i).startIndice},
-				${hashtags(i).endIndice})
+				'${escapeSQL(hashtags(i).text.getOrElse(""))}',
+				${hashtags(i).start.getOrElse(0)},
+				${hashtags(i).end.getOrElse(0)})
 			ON CONFLICT (tweet_id, rank) DO NOTHING"""
 			
 			multiInsertions.stmt.addBatch(sql)
@@ -253,8 +253,8 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 				${urls(i).status},
 				'${escapeSQL(urls(i).title.map(_.replace("'", "''")).getOrElse(""))}',
 				'${escapeSQL(urls(i).description.map(_.replace("'", "''")).getOrElse(""))}',
-				${urls(i).startIndice},
-				${urls(i).endIndice})
+				${urls(i).start.getOrElse(0)},
+				${urls(i).end.getOrElse(0)})
             ON CONFLICT (tweet_id, rank) DO NOTHING"""
 			
 			multiInsertions.stmt.addBatch(sql)
@@ -272,9 +272,9 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${escapeSQL(cashtags(i).text)}',
-				${cashtags(i).startIndice},
-				${cashtags(i).endIndice})
+				'${escapeSQL(cashtags(i).text.getOrElse(""))}',
+				${cashtags(i).start.getOrElse(0)},
+				${cashtags(i).end.getOrElse(0)})
 			ON CONFLICT (tweet_id, rank) DO NOTHING"""
 			
 			multiInsertions.stmt.addBatch(sql)
@@ -299,15 +299,15 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 			VALUES(
 				'$tweetId',
 				${i + 1},
-				'${escapeSQL(media.key)}',
-				'${escapeSQL(media.mediaType)}',
-				'${escapeSQL(media.mediaUrl)}',
-				${media.durationMs},
-				${media.height},
-				${media.width},
- 				'${escapeSQL(media.previewImageUrl)}',
-	 			${media.viewCount},
-  				'${escapeSQL(media.alternativeText.map(_.replace("'", "''")).getOrElse(""))}')
+				'${escapeSQL(media.key.getOrElse(""))}',
+				'${escapeSQL(media.mediaType.getOrElse(""))}',
+				'${escapeSQL(media.url.getOrElse(""))}',
+				${media.durationMs.getOrElse("NULL")},
+				${media.height.getOrElse("NULL")},
+				${media.width.getOrElse("NULL")},
+ 				'${escapeSQL(media.previewUrl.getOrElse(""))}',
+	 			${media.viewCount.getOrElse("NULL")},
+  				'${escapeSQL(media.altText.map(_.replace("'", "''")).getOrElse(""))}')
 			ON CONFLICT (tweet_id, rank) DO NOTHING"""
 			
 			multiInsertions.stmt.addBatch(sql)
@@ -316,7 +316,7 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 	
 	def addBatchTweetUserMentions(multiInsertions: MultiInsertions, tweetId: String, mentions: scala.Array[UserMention]): Unit = {
 		for (i <- mentions.indices) {
-			if (mentions(i).userId != null) {
+			if (mentions(i).id.isDefined) {
 				val sql = s"""INSERT INTO $schema.$TWEET_USER_MENTION_TABLE(
 					tweet_id,
 					rank,
@@ -326,9 +326,9 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 				VALUES(
 					'$tweetId',
 					${i + 1},
-					'${escapeSQL(mentions(i).userId)}',
-					${mentions(i).startIndice},
-					${mentions(i).endIndice})
+					'${escapeSQL(mentions(i).id.getOrElse(""))}',
+					${mentions(i).start.getOrElse(0)},
+					${mentions(i).end.getOrElse(0)})
 				ON CONFLICT (tweet_id, rank) DO NOTHING"""
 				
 				multiInsertions.stmt.addBatch(sql)
@@ -362,8 +362,8 @@ class PostgresDao(val config: PostgresConfig) extends Logging {
 				${i + 1},
 				'${escapeSQL(annotations(i).annotationType)}',
 				'${escapeSQL(annotations(i).normalizedText)}',
-				${annotations(i).startIndice},
-				${annotations(i).endIndice})
+				${annotations(i).start.getOrElse(0)},
+				${annotations(i).end.getOrElse(0)})
 			ON CONFLICT (tweet_id, rank) DO NOTHING"""
 			
 			multiInsertions.stmt.addBatch(sql)
