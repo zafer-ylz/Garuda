@@ -1,8 +1,8 @@
 package models.tweet
 
-import net.liftweb.json._
 import java.time.OffsetDateTime
 import utils.GetJson
+import play.api.libs.json._
 
 import com.twitter.clientlib.JSON
 import com.twitter.clientlib.model.{Expansions, StreamingTweetResponse, TweetReferencedTweets, Tweet => TTweet}
@@ -66,7 +66,7 @@ class Tweet(val basicTweet: TTweet) {
 	}
 	lazy val places: Array[Place] = {
 		if (extendedTweet.isDefined && extendedTweet.get.getPlaces != null) {
-			extendedTweet.get.getPlaces.asScala.map(new Place(_)).toArray
+			extendedTweet.get.getPlaces.asScala.map(p => Place(p)).toArray
 		} else {
 			Array[Place]()
 		}
@@ -125,7 +125,7 @@ class Tweet(val basicTweet: TTweet) {
 		if (extendedTweet.isDefined && extendedTweet.get.getMedia != null) {
 			try {
 				extendedTweet.get.getMedia.asScala.map(media => {
-					val mediaJson: JValue = parse(media.toJson)
+					val mediaJson: JsValue = Json.parse(media.toJson)
 					val key: Option[String] = GetJson.optionString(mediaJson \ "media_key")
 					val mediaType: Option[String] = GetJson.optionString(mediaJson \ "type")
 					val url: Option[String] = GetJson.optionString(mediaJson \ "url")
@@ -144,7 +144,6 @@ class Tweet(val basicTweet: TTweet) {
 		} else {
 			Array[Media]()
 		}
-		
 	}
 	lazy val polls: Array[Poll] = {
 		if (extendedTweet.isDefined && extendedTweet.get.getPolls != null) {

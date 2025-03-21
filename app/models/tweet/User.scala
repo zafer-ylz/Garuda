@@ -14,6 +14,9 @@ class User(private val user: TUser) {
 	lazy val id: Option[String] = Option(user.getId)
 	lazy val name: Option[String] = Option(user.getName)
 	lazy val screen_name: Option[String] = Option(user.getUsername)
+	// Alias pour la cohérence
+	lazy val screenName: Option[String] = screen_name
+	lazy val username: Option[String] = screen_name
 	
 	// Informations de profil
 	lazy val location: Option[String] = Option(user.getLocation)

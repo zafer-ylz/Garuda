@@ -61,7 +61,7 @@ object MessageAdapter extends Logging {
       
       // Extracting user
       val author = if (tweet.user.isDefined) {
-        tweet.user.get.screen_name.getOrElse(tweet.userId.getOrElse("unknown"))
+        tweet.user.get.screenName.getOrElse(tweet.userId.getOrElse("unknown"))
       } else {
         tweet.userId.getOrElse("unknown")
       }
