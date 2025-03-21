@@ -1,0 +1,139 @@
+@(account: models.SocialAccount, accountForm: Form[_])(implicit request: RequestHeader)
+
+@import providers.ProviderType
+@import helper._
+
+@main("Modifier un compte") {
+    <div class="container mt-4">
+        <h1>Modifier un compte</h1>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Configuration du compte @account.name</h5>
+            </div>
+            <div class="card-body">
+                @account.providerType match {
+                    case ProviderType.Twitter => {
+                        @helper.form(action = routes.AccountController.update(account.id.getOrElse(""))) {
+                            @CSRF.formField
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("name"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Nom du compte",
+                                    Symbol("placeholder") -> "Mon compte Twitter"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("identifier"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Identifiant Twitter",
+                                    Symbol("placeholder") -> "@moncompte"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputPassword(
+                                    accountForm("password"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Mot de passe",
+                                    Symbol("placeholder") -> "••••••••"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("apiKey"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Clé API",
+                                    Symbol("placeholder") -> "Clé API Twitter"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("apiSecret"),
+                                    Symbol("class") -> "form-control", 
+                                    Symbol("_label") -> "Secret API",
+                                    Symbol("placeholder") -> "Secret API Twitter"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("accessToken"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Token d'accès",
+                                    Symbol("placeholder") -> "Token d'accès Twitter"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("accessTokenSecret"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Secret du token d'accès",
+                                    Symbol("placeholder") -> "Secret du token d'accès Twitter"
+                                )
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                            <a href="@routes.AccountController.index()" class="btn btn-secondary ms-2">Annuler</a>
+                        }
+                    }
+                    
+                    case ProviderType.Bluesky => {
+                        @helper.form(action = routes.AccountController.update(account.id.getOrElse(""))) {
+                            @CSRF.formField
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("name"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Nom du compte",
+                                    Symbol("placeholder") -> "Mon compte Bluesky"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputText(
+                                    accountForm("identifier"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Identifiant Bluesky",
+                                    Symbol("placeholder") -> "handle.bsky.social"
+                                )
+                            </div>
+                            
+                            <div class="mb-3">
+                                @helper.inputPassword(
+                                    accountForm("password"),
+                                    Symbol("class") -> "form-control",
+                                    Symbol("_label") -> "Mot de passe",
+                                    Symbol("placeholder") -> "••••••••"
+                                )
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Pour Bluesky, vous devez utiliser votre identifiant complet (handle.bsky.social) et votre mot de passe d'application.
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                            <a href="@routes.AccountController.index()" class="btn btn-secondary ms-2">Annuler</a>
+                        }
+                    }
+                    
+                    case _ => {
+                        <div class="alert alert-warning">
+                            Type de compte non pris en charge pour l'édition.
+                        </div>
+                        <a href="@routes.AccountController.index()" class="btn btn-secondary">Retour</a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+} 
