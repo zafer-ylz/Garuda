@@ -66,4 +66,19 @@ abstract class BaseAccount {
    * Supprime des règles d'une collecte
    */
   def removeRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]]
+  
+  /**
+   * Annule les opérations en cours
+   */
+  def cancel(): Boolean
+  
+  /**
+   * Obtient les règles actives
+   */
+  def getActiveRules: Seq[SocialMediaRule] = Seq.empty
+  
+  /**
+   * Obtient la longueur maximale de règle autorisée pour ce compte
+   */
+  def getMaxRuleLength: Int = 1024
 } 

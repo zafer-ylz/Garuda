@@ -132,6 +132,21 @@ case class BlueskyAccount(
    * Méthode spécifique à Bluesky pour obtenir le mot de passe
    */
   def getPassword: String = password
+  
+  /**
+   * Méthode pour obtenir les règles actives
+   */
+  def getActiveRules: Seq[SocialMediaRule] = rules.getOrElse(Seq.empty)
+  
+  /**
+   * Méthode pour obtenir le type de provider
+   */
+  def getProviderType: ProviderType = providerType
+  
+  /**
+   * Méthode pour obtenir la longueur maximale de règle autorisée pour ce compte
+   */
+  def getMaxRuleLength: Int = 1024 // Valeur exemple, à ajuster selon les besoins
 }
 
 /**

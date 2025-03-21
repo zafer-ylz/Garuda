@@ -125,6 +125,21 @@ case class TwitterAccount(
    */
   def getBearerToken: String = bearerToken
   
+  /**
+   * Méthode pour obtenir les règles actives
+   */
+  def getActiveRules: Seq[SocialMediaRule] = rules.getOrElse(Seq.empty)
+  
+  /**
+   * Méthode pour obtenir le type de provider
+   */
+  def getProviderType: ProviderType = providerType
+  
+  /**
+   * Méthode pour obtenir la longueur maximale de règle autorisée pour ce compte
+   */
+  def getMaxRuleLength: Int = 1024 // Valeur exemple, à ajuster selon les besoins
+  
   override def cancel(): Boolean = {
     if (currentActiveCollect.isDefined) {
       currentActiveCollect.get.isActive

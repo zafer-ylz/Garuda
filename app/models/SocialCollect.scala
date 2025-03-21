@@ -71,4 +71,19 @@ trait SocialCollect {
    * Ferme la collecte (arrête la collecte de données)
    */
   def close(): Unit
+  
+  /**
+   * Obtient les règles temporaires
+   */
+  def getTemporaryRules: Option[Seq[models.TemporaryRule]] = None
+  
+  /**
+   * Définit les règles temporaires
+   */
+  def setTemporaryRules(temporaryRules: Seq[models.TemporaryRule]): Unit = {}
+  
+  /**
+   * Supprime des règles temporaires
+   */
+  def removeTemporaryRulesFromList(temporaryRulesToRemove: Seq[models.TemporaryRule]): Unit = {}
 } 
