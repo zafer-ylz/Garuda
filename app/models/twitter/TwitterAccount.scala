@@ -153,23 +153,4 @@ class TwitterStreamConnection(
   override def isActive: Boolean = {
     tweetStreamListener.isActive
   }
-}
-
-/**
- * Objet companion pour les formulaires
- */
-object TwitterAccountForm {
-  /**
-   * Forms related
-   */
-  import play.api.data.Forms._
-  import play.api.data._
-  
-  val form: Form[TwitterAccount] = Form(
-    mapping(
-      "Name" -> nonEmptyText,
-      "Account type" -> Forms.of[AccountType],
-      "Bearer Token" -> nonEmptyText
-    )(TwitterAccount.apply(_, _, _, DateTime.now()))(account => Some((account.name, account.accountType, account.bearerToken)))
-  )
 } 
