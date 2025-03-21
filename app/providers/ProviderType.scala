@@ -1,31 +1,24 @@
 package providers
 
-sealed trait ProviderType {
-  def id: String
-  def name: String
-  def description: String
-}
-
-object ProviderType {
-  case object Twitter extends ProviderType {
-    val id = "twitter"
-    val name = "Twitter/X"
-    val description = "Twitter/X API pour la collecte de tweets"
+object ProviderType extends Enumeration {
+  type ProviderType = Value
+  
+  val Twitter = Value("twitter")
+  val Bluesky = Value("bluesky")
+  
+  def fromId(id: String): Option[ProviderType] = values.find(_.toString == id)
+  
+  // Méthode pour obtenir le nom lisible d'un type de provider
+  def getDisplayName(providerType: ProviderType): String = providerType match {
+    case Twitter => "Twitter/X"
+    case Bluesky => "Bluesky"
+    case _ => providerType.toString
   }
   
-  case object Bluesky extends ProviderType {
-    val id = "bluesky"
-    val name = "Bluesky"
-    val description = "Bluesky API pour la collecte de posts"
+  // Méthode pour obtenir la description d'un type de provider
+  def getDescription(providerType: ProviderType): String = providerType match {
+    case Twitter => "Twitter/X API pour la collecte de tweets"
+    case Bluesky => "Bluesky API pour la collecte de posts"
+    case _ => "Provider non documenté"
   }
-  
-  // Méthode pour récupérer un ProviderType depuis son id
-  def fromId(id: String): Option[ProviderType] = id match {
-    case Twitter.id => Some(Twitter)
-    case Bluesky.id => Some(Bluesky)
-    case _ => None
-  }
-  
-  // Liste de tous les providers disponibles
-  def values: Seq[ProviderType] = Seq(Twitter, Bluesky)
 } 

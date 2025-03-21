@@ -87,7 +87,7 @@ abstract class BaseAccount extends SocialAccount {
         r.tag, 
         r.content, 
         r.collectName, 
-        convertToJodaDateTime(r.createdAt)
+        r.createdAt
       )
     )
     
@@ -95,7 +95,7 @@ abstract class BaseAccount extends SocialAccount {
     addRules(collectName, socialMediaRules).map(result => 
       result.map(r => {
         val id = r.id.map(_.toLong).getOrElse(-1L)
-        val rule = new Rule(id, r.tag, r.content, r.collectName)
+        val rule = new Rule(id, r.tag, r.content, r.collectName, r.createdAt)
         rule.setActive(r.isActive)
         rule
       })
@@ -118,7 +118,7 @@ abstract class BaseAccount extends SocialAccount {
         r.tag, 
         r.content, 
         r.collectName, 
-        convertToJodaDateTime(r.createdAt)
+        r.createdAt
       )
     )
     
@@ -126,7 +126,7 @@ abstract class BaseAccount extends SocialAccount {
     removeRules(collectName, socialMediaRules).map(result => 
       result.map(r => {
         val id = r.id.map(_.toLong).getOrElse(-1L)
-        val rule = new Rule(id, r.tag, r.content, r.collectName)
+        val rule = new Rule(id, r.tag, r.content, r.collectName, r.createdAt)
         rule.setActive(r.isActive)
         rule
       })
@@ -154,7 +154,7 @@ abstract class BaseAccount extends SocialAccount {
   def activeRulesList: List[Rule] = {
     getActiveRules.map(r => {
       val id = r.id.map(_.toLong).getOrElse(-1L)
-      val rule = new Rule(id, r.tag, r.content, r.collectName)
+      val rule = new Rule(id, r.tag, r.content, r.collectName, r.createdAt)
       rule.setActive(r.isActive)
       rule
     }).toList
@@ -164,18 +164,4 @@ abstract class BaseAccount extends SocialAccount {
    * Obtient la longueur maximale de règle autorisée pour ce compte
    */
   def getMaxRuleLength: Int = 1024
-  
-  /**
-   * Conversion de LocalDateTime à DateTime pour la compatibilité
-   */
-  protected def convertToJodaDateTime(localDateTime: java.time.LocalDateTime): DateTime = {
-    new DateTime(
-      localDateTime.getYear,
-      localDateTime.getMonthValue,
-      localDateTime.getDayOfMonth,
-      localDateTime.getHour,
-      localDateTime.getMinute,
-      localDateTime.getSecond
-    )
-  }
 } 

@@ -5,7 +5,6 @@ import providers.{ProviderType, SocialMediaRule, StreamingConnection}
 import providers.twitter.{TwitterProvider, TwitterRule}
 import twitter.{TwitterConnection, TweetStreamListener}
 import org.joda.time.DateTime
-import java.time.ZoneId
 import scala.collection.JavaConverters._
 
 /**
@@ -18,10 +17,11 @@ case class TwitterAccount(
   override val createdAt: DateTime = DateTime.now()
 ) extends BaseAccount {
   private var rules: Option[Seq[SocialMediaRule]] = None
-  private val twitterConnection = new TwitterConnection(this)
+  private val adapter = new TwitterAccountAdapter(this)
+  private val twitterConnection = new TwitterConnection(adapter)
   private var currentActiveCollect: Option[TwitterStreamConnection] = None
   
-  override def providerType: ProviderType = ProviderType.Twitter
+  override def providerType: ProviderType.ProviderType = ProviderType.Twitter
   
   var rateFilteredStreamConnecting: Int = accountType.rateFilteredStreamConnecting
   var rateFilteredStreamAddingOrDeletingFilters: Int = accountType.rateFilteredStreamAddingOrDeletingFilters
@@ -45,7 +45,8 @@ case class TwitterAccount(
   
   override def startCollect(collect: SocialCollect): Either[String, StreamingConnection] = {
     if (currentActiveCollect.isEmpty) {
-      val result = twitterConnection.startCollect(collect.asInstanceOf[TwitterCollect])
+      val collectAdapter = new TwitterCollectAdapter(collect.asInstanceOf[TwitterCollect])
+      val result = twitterConnection.startCollect(collectAdapter)
       if (result.isRight) {
         val connection = new TwitterStreamConnection(result.toOption.get, collect)
         currentActiveCollect = Some(connection)
@@ -80,17 +81,12 @@ case class TwitterAccount(
     val activeRules = twitterConnection.getAllRules(collectName)
     if (activeRules.isRight) {
       val rulesConverted = activeRules.toOption.get.map(rule => {
-        // Convertir java.time.LocalDateTime à org.joda.time.DateTime
-        val javaDateTime = rule.createdAt
-        val instant = javaDateTime.atZone(ZoneId.systemDefault()).toInstant()
-        val jodaDateTime = new DateTime(instant.toEpochMilli())
-        
         new TwitterRule(
           Option(rule.id.toString),
           rule.tag,
           rule.content,
-          rule.collect,
-          jodaDateTime
+          rule.collectName,
+          rule.createdAt // Utiliser directement la DateTime
         )
       })
       rules = Some(rulesConverted)
@@ -108,7 +104,8 @@ case class TwitterAccount(
         rule.id.map(_.toLong).getOrElse(-1L),
         rule.tag,
         rule.content,
-        rule.collectName
+        rule.collectName,
+        rule.createdAt
       )
     )
     
@@ -116,17 +113,12 @@ case class TwitterAccount(
     
     if (addedRules.isRight) {
       val convertedRules = addedRules.toOption.get.map(rule => {
-        // Conversion de LocalDateTime à DateTime
-        val javaDateTime = rule.createdAt
-        val instant = javaDateTime.atZone(ZoneId.systemDefault()).toInstant()
-        val jodaDateTime = new DateTime(instant.toEpochMilli())
-        
         new TwitterRule(
           Option(rule.id.toString),
           rule.tag,
           rule.content,
           rule.collectName,
-          jodaDateTime
+          rule.createdAt
         )
       })
       this.rules = Some(convertedRules)
@@ -143,7 +135,8 @@ case class TwitterAccount(
         rule.id.map(_.toLong).getOrElse(-1L),
         rule.tag,
         rule.content,
-        rule.collectName
+        rule.collectName,
+        rule.createdAt
       )
     )
     
@@ -168,6 +161,30 @@ case class TwitterAccount(
       false
     }
   }
+}
+
+/**
+ * Adapter pour TwitterAccount vers Account
+ */
+class TwitterAccountAdapter(twitterAccount: TwitterAccount) extends models.Account {
+  override def name: String = twitterAccount.name
+  override def createdAt: DateTime = twitterAccount.createdAt
+  override def bearerToken: String = twitterAccount.bearerToken
+  override def getProviderType: ProviderType.ProviderType = ProviderType.Twitter
+}
+
+/**
+ * Adapter pour TwitterCollect vers Collect
+ */
+class TwitterCollectAdapter(twitterCollect: TwitterCollect) extends models.Collect(
+  twitterCollect.name, 
+  twitterCollect.directory, 
+  twitterCollect.accountName, 
+  ProviderType.Twitter,
+  twitterCollect.isActive,
+  twitterCollect.createdAt
+) {
+  // Adapte spécifiquement pour utiliser la TwitterCollect
 }
 
 /**

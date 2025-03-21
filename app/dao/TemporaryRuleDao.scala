@@ -33,22 +33,18 @@ class TemporaryRuleDao @Inject() (protected val dbConfigProvider: DatabaseConfig
 			dateTime => new Timestamp(dateTime.getMillis),
 			timeStamp => new DateTime(timeStamp.getTime)
 		)
-		def createdAt = column[java.time.LocalDateTime]("created_at")
+		def createdAt = column[DateTime]("created_at")
 		
-		override def * = (id.?, ruleTag, content, collect, createdAt) <> (
-		  { tuple =>
-		    val (id, tag, content, collect, createdAt) = tuple
-		    val jodaTime = new DateTime(createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant.toEpochMilli)
-		    TemporaryRule(id, tag, content, collect, jodaTime)
-		  },
-		  { rule: TemporaryRule =>
-		    val localDateTime = java.time.LocalDateTime.ofInstant(
-		      java.time.Instant.ofEpochMilli(rule.createdAt.getMillis),
-		      java.time.ZoneId.systemDefault()
-		    )
-		    Some((rule.id, rule.ruleTag, rule.content, rule.collect, localDateTime))
-		  }
-		)
+		// Méthode pour faire la conversion entre les colonnes de la base de données et l'objet TemporaryRule
+		def toTemporaryRule(id: Option[Long], tag: String, content: String, collect: String, jodaTime: DateTime): TemporaryRule = {
+			TemporaryRule(id, tag, content, collect, jodaTime)
+		}
+		
+		def fromTemporaryRule(rule: TemporaryRule): Option[(Option[Long], String, String, String, DateTime)] = {
+			Some((rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt))
+		}
+		
+		override def * = (id.?, ruleTag, content, collect, createdAt) <> (toTemporaryRule, fromTemporaryRule)
 	}
 	
 	private val rules = TableQuery[TemporaryRulesTable]

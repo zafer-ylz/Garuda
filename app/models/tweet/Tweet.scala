@@ -2,6 +2,7 @@ package models.tweet
 
 import net.liftweb.json._
 import java.time.OffsetDateTime
+import utils.GetJson
 
 import com.twitter.clientlib.JSON
 import com.twitter.clientlib.model.{Expansions, StreamingTweetResponse, TweetReferencedTweets, Tweet => TTweet}

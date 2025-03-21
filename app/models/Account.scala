@@ -3,7 +3,6 @@ package models
 import providers.{ProviderType, SocialMediaRule, StreamingConnection}
 import org.joda.time.DateTime
 import models.twitter.{TwitterAccount, TwitterCollect}
-import java.time.LocalDateTime
 
 /**
  * Cette classe est maintenue pour des raisons de compatibilité avec l'ancien code.
@@ -23,8 +22,8 @@ case class Account(name: String, accountType: AccountType, bearerToken: String) 
 	
 	// Méthode pour adapter SocialMediaRule à Rule
 	private def adaptRule(rule: SocialMediaRule): Rule = {
-		val id = rule.id.map(_.toLong).getOrElse(-1L)
-		val newRule = new Rule(id, rule.tag, rule.content, rule.collectName)
+		val id = rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+		val newRule = new Rule(id, rule.tag, rule.content, rule.collectName, rule.createdAt)
 		newRule.setActive(rule.isActive)
 		newRule
 	}
@@ -36,19 +35,7 @@ case class Account(name: String, accountType: AccountType, bearerToken: String) 
 			rule.tag, 
 			rule.content, 
 			rule.collectName, 
-			convertToJodaDateTime(rule.createdAt)
-		)
-	}
-	
-	// Conversion de LocalDateTime à DateTime pour la compatibilité
-	private def convertToJodaDateTime(localDateTime: LocalDateTime): DateTime = {
-		new DateTime(
-			localDateTime.getYear,
-			localDateTime.getMonthValue,
-			localDateTime.getDayOfMonth,
-			localDateTime.getHour,
-			localDateTime.getMinute,
-			localDateTime.getSecond
+			rule.createdAt
 		)
 	}
 	

@@ -4,95 +4,133 @@ import java.sql._
 import models.SocialMediaMessage
 import models.tweet.Tweet
 import play.api.Logging
+import play.api.libs.json.{JsValue, Json}
+import org.joda.time.DateTime
+import providers.ProviderType
 
-class PostgresInsertion(val config: PostgresConfig) extends Logging {
-	private val conn: Connection = DriverManager.getConnection(config.getUrl, config.getProperties)
-	private val schema: String = config.schema
+/**
+ * Classe pour insérer des messages dans PostgreSQL
+ */
+class PostgresInsertion(config: PostgresConfig) extends Module with Logging {
+	private var connection: Connection = _
+	private var preparedStatement: PreparedStatement = _
+	
+	// Initialiser la connexion
+	try {
+		Class.forName("org.postgresql.Driver")
+		connection = DriverManager.getConnection(
+			config.getUrl,
+			config.user,
+			config.password
+		)
+		
+		// Créer le schéma si nécessaire
+		val schemaStatement = connection.createStatement()
+		schemaStatement.execute(s"CREATE SCHEMA IF NOT EXISTS ${config.schema}")
+		schemaStatement.close()
+		
+		// Créer les tables si nécessaires
+		val createTableStatement = connection.createStatement()
+		createTableStatement.execute(
+			s"""
+				|CREATE TABLE IF NOT EXISTS ${config.schema}.messages (
+				|  id TEXT PRIMARY KEY,
+				|  provider_type TEXT NOT NULL,
+				|  content TEXT NOT NULL,
+				|  author_id TEXT NOT NULL,
+				|  created_at TIMESTAMP NOT NULL,
+				|  metadata JSONB,
+				|  raw_data JSONB
+				|)
+				|""".stripMargin)
+		createTableStatement.close()
+		
+		// Préparer la requête d'insertion
+		preparedStatement = connection.prepareStatement(
+			s"""
+				|INSERT INTO ${config.schema}.messages 
+				|(id, provider_type, content, author_id, created_at, metadata, raw_data)
+				|VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)
+				|ON CONFLICT (id) DO NOTHING
+				|""".stripMargin)
+	} catch {
+		case e: Exception => 
+			logger.error("Error initializing PostgreSQL connection", e)
+			throw e
+	}
 	
 	/**
-	 * Insère une ligne dans la base de données
+	 * Insère une ligne brute JSON
 	 */
-	def insertLine(json: String): Unit = {
-		val stmt = conn.createStatement()
+	def insertLine(line: String): Unit = {
 		try {
-			val tweet = new Tweet(json)
-			if (tweet.id.isDefined) {
-				// Insertion dans la table commune des messages
-				val metadataJson = Map(
-					"text" -> tweet.text,
-					"source" -> tweet.source,
-					"language" -> tweet.lang,
-					"coordinates" -> tweet.coordinates.map(c => Map(
-						"longitude" -> c.longitude,
-						"latitude" -> c.latitude
-					)),
-					"possibly_sensitive" -> tweet.possiblySensitive
-				).toString
-				
-				stmt.execute(s"""INSERT INTO $schema.${PostgresConstants.MESSAGE_TABLE} 
-					(id, provider_type, content, author_id, created_at, metadata) 
-					VALUES (
-						'${tweet.id.get}',
-						'twitter',
-						'${escapeSQL(tweet.text)}',
-						'${tweet.userId.get}',
-						'${tweet.createdAt}',
-						'$metadataJson'::jsonb
-					)
-					ON CONFLICT (id) DO NOTHING""")
-			}
-		} finally {
-			stmt.close()
+			val message = SocialMediaMessage.fromJson(line)
+			processMessage(message, Some(line))
+		} catch {
+			case e: Exception =>
+				logger.error(s"Error processing line: $line", e)
 		}
 	}
 	
 	/**
-	 * Insère un message Bluesky dans la base de données
+	 * Traite un message pour insertion
+	 */
+	override def processMessage(message: SocialMediaMessage): Unit = {
+		processMessage(message, None)
+	}
+	
+	/**
+	 * Insère un message Bluesky
 	 */
 	def insertBlueskyMessage(message: SocialMediaMessage): Unit = {
-		val stmt = conn.createStatement()
+		processMessage(message, None)
+	}
+	
+	/**
+	 * Implémentation interne du traitement des messages
+	 */
+	private def processMessage(message: SocialMediaMessage, rawData: Option[String]): Unit = {
 		try {
-			// Insertion dans la table commune des messages
-			val metadataJson = message.metadata.map {
-				case (k, v: String) => s""""$k":"${escapeSQL(v)}""""
-				case (k, v) => s""""$k":$v"""
-			}.mkString("{", ",", "}")
+			preparedStatement.setString(1, message.id)
+			preparedStatement.setString(2, message.providerType.toString)
+			preparedStatement.setString(3, message.content)
+			preparedStatement.setString(4, message.authorId)
+			preparedStatement.setTimestamp(5, new Timestamp(message.createdAt.getMillis))
 			
-			stmt.execute(s"""INSERT INTO $schema.${PostgresConstants.MESSAGE_TABLE} 
-				(id, provider_type, content, author_id, created_at, metadata) 
-				VALUES ('${message.id}', '${message.providerType}', '${escapeSQL(message.content)}', 
-					'${message.authorId}', '${message.createdAt}', '$metadataJson'::jsonb)
-				ON CONFLICT (id) DO NOTHING""")
+			// Conversion de la map en JSON
+			val metadataJson = Json.toJson(message.metadata).toString()
+			preparedStatement.setString(6, metadataJson)
 			
-			// Insertion dans la table spécifique Bluesky
-			val replyCount = message.metadata.getOrElse("reply_count", 0).toString.toInt
-			val repostCount = message.metadata.getOrElse("repost_count", 0).toString.toInt
-			val likeCount = message.metadata.getOrElse("like_count", 0).toString.toInt
+			// Données brutes
+			val rawJson = rawData.getOrElse(Json.toJson(message).toString())
+			preparedStatement.setString(7, rawJson)
 			
-			stmt.execute(s"""INSERT INTO $schema.${PostgresConstants.BLUESKY_POST_TABLE} 
-				(id, uri, cid, author, text, reply_count, repost_count, like_count, created_at, indexed_at) 
-				VALUES ('${message.id}', 
-					'${escapeSQL(message.metadata.getOrElse("uri", "").toString)}',
-					'${escapeSQL(message.metadata.getOrElse("cid", "").toString)}',
-					'${escapeSQL(message.metadata.getOrElse("author", "").toString)}',
-					'${escapeSQL(message.content)}',
-					$replyCount,
-					$repostCount,
-					$likeCount,
-					'${message.createdAt}',
-					'${message.metadata.getOrElse("indexed_at", message.createdAt).toString}')
-				ON CONFLICT (id) DO NOTHING""")
-		} finally {
-			stmt.close()
+			preparedStatement.executeUpdate()
+		} catch {
+			case e: Exception =>
+				logger.error(s"Error inserting message: ${message.id}", e)
 		}
 	}
 	
-	private def escapeSQL(str: String): String = {
-		str.replace("'", "''")
-	}
-	
-	def close(): Unit = {
-		conn.close()
+	/**
+	 * Ferme les ressources
+	 */
+	override def close(): Unit = {
+		if (preparedStatement != null) {
+			try {
+				preparedStatement.close()
+			} catch {
+				case _: Exception => // Ignorer
+			}
+		}
+		
+		if (connection != null) {
+			try {
+				connection.close()
+			} catch {
+				case _: Exception => // Ignorer
+			}
+		}
 	}
 }
 

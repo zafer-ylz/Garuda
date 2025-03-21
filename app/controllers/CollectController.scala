@@ -89,12 +89,11 @@ class CollectController @Inject()(
 			
 			// Conversion de SocialMediaRule à Rule
 			val rulesToRemove = account.activeRules.filter(rule => {
-				val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
-				rulesIds.contains(ruleId)
+				rulesIds.contains(rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L))
 			})
 				.map(r => {
-					val id = r.id.map(_.toLong).getOrElse(-1L)
-					val rule = new Rule(id, r.tag, r.content, r.collectName)
+					val id = r.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
+					val rule = new Rule(id, r.tag, r.content, r.collectName, r.createdAt)
 					rule.setActive(r.isActive)
 					rule
 				}).toList
@@ -121,7 +120,7 @@ class CollectController @Inject()(
 		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
 		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
 		val newNonActiveRules = collect.activeRules.filter(rule => {
-			val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
+			val ruleId = rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
 			newNonActiveIdRules.contains(ruleId)
 		})
 		
@@ -237,7 +236,7 @@ class CollectController @Inject()(
 					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
 						val activeIds = account.activeRules.map(rule => {
-							rule.id.map(_.toLong).getOrElse(-1L)
+							rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
 						})
 						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id)))
 					}
@@ -272,12 +271,10 @@ class CollectController @Inject()(
 		}
 	}
 	
-	private def displayCollect(collect: Collect, flash: Flash = new Flash(Map())): Future[Result] = {
+	private def displayCollect(collect: Collect, flash: Flash = new Flash(Map()))(implicit request: MessagesRequest[AnyContent]): Future[Result] = {
 		accountDao.all().map { accounts =>
 			accountDao.findByName(collect.accountName).map {
 				case Some(account) => {
-					// Récupération implicite du provider de messages et CSRF
-					implicit val request: MessagesRequest[AnyContent] = this.request
 					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
 						postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), CSRF.getToken.map(_.value).getOrElse(""))).flashing(flash)
 				}

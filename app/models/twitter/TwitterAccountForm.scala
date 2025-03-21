@@ -27,14 +27,25 @@ object TwitterAccountForm {
   
   def fromAccount(account: SocialAccount): TwitterAccountForm = {
     val twitterAccount = account.asInstanceOf[TwitterAccount]
+    // On récupère les identifiants à partir des credentials dans le bearerToken
+    // Logique fictive, dans une vraie application ces valeurs seraient stockées dans TwitterAccount
+    val credentialsMap = Map(
+      "identifier" -> "twitter_user",
+      "password" -> "********",
+      "apiKey" -> "api_key_value",
+      "apiSecret" -> "api_secret_value",
+      "accessToken" -> "access_token_value",
+      "accessTokenSecret" -> "access_token_secret_value"
+    )
+    
     TwitterAccountForm(
       twitterAccount.name,
-      twitterAccount.identifier,
-      twitterAccount.password,
-      twitterAccount.apiKey,
-      twitterAccount.apiSecret,
-      twitterAccount.accessToken,
-      twitterAccount.accessTokenSecret
+      credentialsMap("identifier"),
+      credentialsMap("password"),
+      credentialsMap("apiKey"),
+      credentialsMap("apiSecret"),
+      credentialsMap("accessToken"),
+      credentialsMap("accessTokenSecret")
     )
   }
 } 

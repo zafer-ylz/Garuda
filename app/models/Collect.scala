@@ -1,7 +1,5 @@
 package models
 
-import java.time.LocalDateTime
-
 import providers.{ProviderType, SocialMediaRule}
 import providers.twitter.TwitterRule
 import org.joda.time.DateTime
@@ -22,19 +20,10 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 	
 	// Méthodes d'adaptation entre Rule et SocialMediaRule
 	private def adaptRule(rule: Rule): SocialMediaRule = {
-		// Conversion de LocalDateTime à DateTime
-		val jodaDateTime = new org.joda.time.DateTime(
-			rule.createdAt.getYear,
-			rule.createdAt.getMonthValue,
-			rule.createdAt.getDayOfMonth,
-			rule.createdAt.getHour,
-			rule.createdAt.getMinute,
-			rule.createdAt.getSecond
-		)
-		
+		// Utilisation directe de la DateTime de Joda
 		providerType match {
 			case ProviderType.Twitter => 
-				new TwitterRule(Option(rule.id.toString), rule.tag, rule.content, rule.collectName, jodaDateTime)
+				new TwitterRule(Option(rule.id.toString), rule.tag, rule.content, rule.collectName, rule.createdAt)
 			case _ => 
 				throw new UnsupportedOperationException(s"Provider ${providerType} not supported")
 		}
@@ -49,13 +38,24 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 	def temporaryRules: Option[List[TemporaryRule]] = _temporaryRules
 	
 	// Méthodes pour les règles  
+	def initRules(adaptedRules: List[Rule]): Unit = {
+		adaptToSocialCollect match {
+			case twitterCollect: TwitterCollect =>
+				val convertedRules = adaptedRules.map(twitterCollect.convertRule)
+				twitterCollect.initRules(convertedRules)
+			case _ =>
+				throw new UnsupportedOperationException(s"Provider type $providerType is not supported")
+		}
+	}
+	
+	// Surcharge de la méthode initRules pour prendre en compte les règles et les règles temporaires
 	def initRules(rules: List[Rule], temporaryRules: List[TemporaryRule]): Unit = {
 		_rules = Some(rules)
 		_temporaryRules = Some(temporaryRules)
 		
-		if (providerType == ProviderType.Twitter) {
-			val adaptedRules = adaptRules(rules)
-			twitterAdapter.initRules(adaptedRules)
+		// Si des règles sont présentes, initialiser aussi dans l'adaptateur social
+		if (rules.nonEmpty) {
+			initRules(rules)
 		}
 	}
 	
@@ -67,19 +67,23 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 		_rules.getOrElse(List.empty).filterNot(_.isActive)
 	}
 	
-	def addRule(rule: Rule): Unit = {
-		_rules = Some(_rules.getOrElse(List.empty) ++ List(rule))
-		
-		if (providerType == ProviderType.Twitter && rule.isActive) {
-			twitterAdapter.addRules(List(adaptRule(rule)))
+	def addRule(rule: Rule): Boolean = {
+		adaptToSocialCollect match {
+			case twitterCollect: TwitterCollect =>
+				val convertedRule = twitterCollect.convertRule(rule)
+				twitterCollect.addRule(convertedRule)
+			case _ =>
+				throw new UnsupportedOperationException(s"Provider type $providerType is not supported")
 		}
 	}
 	
-	def removeRules(rules: List[Rule]): Unit = {
-		_rules = Some(_rules.getOrElse(List.empty).filterNot(r => rules.exists(_.id == r.id)))
-		
-		if (providerType == ProviderType.Twitter) {
-			twitterAdapter.removeRules(adaptRules(rules.filter(_.isActive)))
+	def removeRules(rules: List[Rule]): Boolean = {
+		adaptToSocialCollect match {
+			case twitterCollect: TwitterCollect =>
+				val convertedRules = rules.map(twitterCollect.convertRule)
+				twitterCollect.removeRules(convertedRules)
+			case _ =>
+				throw new UnsupportedOperationException(s"Provider type $providerType is not supported")
 		}
 	}
 	
@@ -158,7 +162,7 @@ case class Rule(
 	tag: String,
 	content: String,
 	collectName: String,
-	createdAt: LocalDateTime = LocalDateTime.now,
+	createdAt: DateTime = new DateTime(),
 	private var _isActive: Boolean = false
 ) {
 	/**
@@ -192,10 +196,25 @@ object Rule {
 	 * Méthode factory pour créer des instances de Rule
 	 */
 	def apply(id: Long, tag: String, content: String, collectName: String,
-		createdAt: LocalDateTime = LocalDateTime.now(), isActive: Boolean = false): Rule = {
+		createdAt: DateTime = new DateTime(), isActive: Boolean = false): Rule = {
 		val rule = new Rule(id, tag, content, collectName, createdAt, isActive)
 		if (isActive) rule.setActive(true)
 		rule
+	}
+	
+	/**
+	 * Méthode tupled pour Slick
+	 */
+	def tupled: ((Long, String, String, String, DateTime, Boolean)) => Rule = {
+		case (id, tag, content, collectName, createdAt, isActive) =>
+			new Rule(id, tag, content, collectName, createdAt, isActive)
+	}
+	
+	/**
+	 * Méthode unapply pour Slick
+	 */
+	def unapply(rule: Rule): Option[(Long, String, String, String, DateTime, Boolean)] = {
+		Some((rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt, rule.isActive))
 	}
 }
 

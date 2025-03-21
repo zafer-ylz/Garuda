@@ -2,11 +2,12 @@ package models.forms
 
 import play.api.data.Forms._
 import play.api.data._
+import play.api.data.format.Formatter
 import providers.ProviderType
 
 case class AccountData(
   name: String,
-  providerType: ProviderType.Value,
+  providerType: ProviderType.ProviderType,
   bearerToken: String,
   identifier: String,
   password: String
@@ -15,23 +16,21 @@ case class AccountData(
 object AccountForm extends BaseForm[AccountData] {
   
   // Formatter personnalisé pour ProviderType
-  private val providerTypeFormatter = new Formatter[ProviderType.Value] {
-    def bind(key: String, data: Map[String, String]): Either[Seq[FormError], ProviderType.Value] = {
+  private val providerTypeFormatter = new Formatter[ProviderType.ProviderType] {
+    def bind(key: String, data: Map[String, String]): Either[Seq[FormError], ProviderType.ProviderType] = {
       data.get(key).map { value =>
-        try {
-          Right(ProviderType.withName(value))
-        } catch {
-          case _: NoSuchElementException => 
-            Left(Seq(FormError(key, "error.invalidProviderType", Nil)))
+        ProviderType.fromId(value) match {
+          case Some(providerType) => Right(providerType)
+          case None => Left(Seq(FormError(key, "error.invalidProviderType", Nil)))
         }
       }.getOrElse(Left(Seq(FormError(key, "error.required", Nil))))
     }
 
-    def unbind(key: String, value: ProviderType.Value): Map[String, String] = 
+    def unbind(key: String, value: ProviderType.ProviderType): Map[String, String] = 
       Map(key -> value.toString)
   }
   
-  private val providerTypeMapping = Forms.of[ProviderType.Value](providerTypeFormatter)
+  private val providerTypeMapping = Forms.of[ProviderType.ProviderType](providerTypeFormatter)
   
   override val form: Form[AccountData] = Form(
     mapping(

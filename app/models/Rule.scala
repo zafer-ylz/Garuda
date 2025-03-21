@@ -3,7 +3,7 @@
 
 package models
 
-import java.time.LocalDateTime
+import org.joda.time.DateTime
 
 // Ce fichier est vide car la définition de Rule a été déplacée vers Collect.scala
 // Pour utiliser Rule, importer directement depuis models sans référence explicite à ce fichier

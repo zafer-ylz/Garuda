@@ -8,7 +8,7 @@ import com.twitter.clientlib.{ApiException, JSON}
 import com.twitter.clientlib.api.TwitterApi
 import com.twitter.clientlib.model.{ConnectionExceptionProblem, OperationalDisconnectProblem, StreamingTweetResponse}
 import models.Collect
-import org.joda.time.LocalDateTime
+import org.joda.time.DateTime
 import play.api.Logging
 
 class TweetStreamingHandler(val twitterApi: TwitterApi, val collect: Collect) extends StreamingHandler[StreamingTweetResponse] with Logging {
@@ -200,7 +200,7 @@ class TweetStreamingHandler(val twitterApi: TwitterApi, val collect: Collect) ex
 	}
 	
 	private def getFileName: String = {
-		val createTime = LocalDateTime.now()
+		val createTime = DateTime.now()
 		val directoryName = s"${createTime.getYear}-${createTime.getMonthOfYear}"
 		val fileName = s"$directoryName-${createTime.getDayOfMonth}_${createTime.getHourOfDay}-${createTime.getMinuteOfHour}-${createTime.getSecondOfMinute}-${createTime.getMillisOfSecond}"
 		s"$directoryName${File.separator}$fileName"

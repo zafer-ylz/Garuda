@@ -1,36 +1,43 @@
 [info] compiling 120 Scala sources and 1 Java source to /app/target/scala-2.13/classes ...
-[error] /app/app/controllers/CollectController.scala:15:8: object FakeRequest is not a member of package play.api.test
-[error] import play.api.test.FakeRequest
-[error]        ^
-[error] /app/app/controllers/CollectController.scala:92:85: value map is not a member of Long
-[error] 			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
-[error] 			                                                                                 ^
-[error] /app/app/controllers/CollectController.scala:121:99: value map is not a member of Long
-[error] 		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.map(id => id.toLong).getOrElse(-1L)))
-[error] 		                                                                                                ^
-[error] /app/app/controllers/CollectController.scala:234:63: value map is not a member of Long
-[error] 						val activeIds = account.activeRules.map(rule => rule.id.map(id => id.toLong).getOrElse(-1L))
-[error] 						                                                        ^
-[error] /app/app/controllers/CollectController.scala:273:32: package play.api.mvc.request is not a value
-[error] 					val token = CSRF.getToken(request).getOrElse(CSRF.Token("csrfToken", ""))
-[error] 					                          ^
-[error] /app/app/controllers/CollectController.scala:274:30: could not find implicit value for parameter request: play.api.mvc.MessagesRequestHeader (An implicit MessagesProvider instance was not found.  Please see https://www.playframework.com/documentation/latest/ScalaForms#Passing-MessagesProvider-to-Form-Helpers)
-[error] 					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
-[error] 					                        ^
-[error] /app/app/dao/RuleDao.scala:21:47: private class RulesTable escapes its defining scope as part of type RuleDao.this.profile.api.Query[RuleDao.this.RulesTable,models.Rule,Seq]
-[error] 	override protected def filterById(id: Long): Query[RulesTable, Rule, Seq] =
-[error] 	                                             ^
-[error] /app/app/dao/RuleDao.scala:58:68: value tupled is not a member of object models.Rule
-[error] 		override def * = (id, ruleTag, content, collect, createdAt).mapTo[Rule]
-[error] 		                                                                 ^
-[error] /app/app/dao/RuleDao.scala:19:25: private class RulesTable escapes its defining scope as part of type slick.lifted.TableQuery[RuleDao.this.RulesTable]
-[error] 	override protected val tableQuery = TableQuery[RulesTable]
-[error] 	                       ^
-[error] /app/app/dao/TemporaryRuleDao.scala:79:70: type mismatch;
-[error]  found   : ((Option[Long], String, String, String, java.time.LocalDateTime)) => models.TemporaryRule
-[error]  required: ((Option[Long], String, String, String, org.joda.time.DateTime)) => models.TemporaryRule
-[error] 		override def * = (id.?, ruleTag, content, collect, createdAt).mapTo[TemporaryRule]
-[error] 		                                                                   ^
+[error] /app/app/controllers/CollectController.scala:92:26: value map is not a member of Long
+[error] 				val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
+[error] 				                     ^
+[error] /app/app/controllers/CollectController.scala:124:25: value map is not a member of Long
+[error] 			val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
+[error] 			                     ^
+[error] /app/app/controllers/CollectController.scala:240:16: value map is not a member of Long
+[error] 							rule.id.map(_.toLong).getOrElse(-1L)
+[error] 							        ^
+[error] /app/app/controllers/CollectController.scala:280:63: value request is not a member of controllers.CollectController
+[error] 					implicit val request: MessagesRequest[AnyContent] = this.request
+[error] 					                                                         ^
+[error] /app/app/dao/RuleDao.scala:38:72: value tupled is not a member of object models.Rule
+[error] 		override def * = (id, ruleTag, content, collect, createdAt) <> (Rule.tupled, Rule.unapply)
+[error] 		                                                                     ^
+[error] /app/app/dao/RuleDao.scala:38:85: type mismatch;
+[error]  found   : Option[(Long, String, String, String, java.time.LocalDateTime, Boolean)]
+[error]  required: Option[(Long, String, String, String, org.joda.time.DateTime)]
+[error] 		override def * = (id, ruleTag, content, collect, createdAt) <> (Rule.tupled, Rule.unapply)
+[error] 		                                                                                  ^
+[error] /app/app/dao/TemporaryRuleDao.scala:42:48: type mismatch;
+[error]  found   : org.joda.time.DateTime
+[error]  required: java.time.LocalDateTime
+[error] 		    TemporaryRule(id, tag, content, collect, jodaTime)
+[error] 		                                             ^
+[error] /app/app/dao/TemporaryRuleDao.scala:46:55: value getMillis is not a member of java.time.LocalDateTime
+[error] 		      java.time.Instant.ofEpochMilli(rule.createdAt.getMillis),
+[error] 		                                                    ^
+[error] /app/app/dao/TemporaryRuleDao.scala:49:27: value ruleTag is not a member of models.TemporaryRule
+[error] 		    Some((rule.id, rule.ruleTag, rule.content, rule.collect, localDateTime))
+[error] 		                        ^
+[error] /app/app/dao/TemporaryRuleDao.scala:49:55: value collect is not a member of models.TemporaryRule
+[error] 		    Some((rule.id, rule.ruleTag, rule.content, rule.collect, localDateTime))
+[error] 		                                                    ^
+[error] /app/app/dao/TemporaryRuleDao.scala:38:65: polymorphic expression cannot be instantiated to expected type;
+[error]  found   : [R]slick.lifted.MappedProjection[R,(Option[Long], String, String, String, java.time.LocalDateTime)]
+[error]  required: slick.lifted.ProvenShape[models.TemporaryRule]
+[error] 		override def * = (id.?, ruleTag, content, collect, createdAt) <> (
+[error] 		                                                              ^
 [error] /app/app/models/Account.scala:115:42: type mismatch;
 [error]  found   : org.joda.time.DateTime
 [error]  required: java.time.LocalDateTime
@@ -46,79 +53,36 @@
 [error] /app/app/models/Collect.scala:82:4: not found: value twitterAdapter
 [error] 			twitterAdapter.removeRules(adaptRules(rules.filter(_.isActive)))
 [error] 			^
-[error] /app/app/models/SocialMediaAccount.scala:4:8: object DateTime is not a member of package java.time
-[error] import java.time.DateTime
-[error]        ^
-[error] /app/app/models/SocialMediaAccount.scala:10:14: not found: type DateTime
-[error]   createdAt: DateTime = DateTime.now()
-[error]              ^
-[error] /app/app/models/SocialMediaAccount.scala:10:25: not found: value DateTime
-[error]   createdAt: DateTime = DateTime.now()
-[error]                         ^
-[error] /app/app/models/SocialMediaCollect.scala:4:8: object DateTime is not a member of package java.time
-[error] import java.time.DateTime
-[error]        ^
-[error] /app/app/models/SocialMediaCollect.scala:11:14: not found: type DateTime
-[error]   createdAt: DateTime = DateTime.now()
-[error]              ^
-[error] /app/app/models/SocialMediaCollect.scala:11:25: not found: value DateTime
-[error]   createdAt: DateTime = DateTime.now()
-[error]                         ^
-[error] /app/app/models/SocialMediaCollect.scala:29:5: ambiguous reference to overloaded definition,
-[error] both method isActive in class SocialMediaCollect of type Boolean
-[error] and  variable isActive in class SocialMediaCollect of type Boolean
-[error] match expected type ?
-[error]     isActive = active
+[error] /app/app/models/SocialMediaMessage.scala:27:56: type Value is not a member of object providers.ProviderType
+[error]   implicit val providerTypeFormat: Format[ProviderType.Value] = new Format[ProviderType.Value] {
+[error]                                                        ^
+[error] /app/app/models/SocialMediaMessage.scala:22:5: not found: value JodaReads
+[error]     JodaReads.jodaDateReads("yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
 [error]     ^
-[error] /app/app/models/SocialMediaCollect.scala:32:27: ambiguous reference to overloaded definition,
-[error] both method isActive in class SocialMediaCollect of type Boolean
-[error] and  variable isActive in class SocialMediaCollect of type Boolean
-[error] match expected type Boolean
-[error]   def isActive: Boolean = isActive
-[error]                           ^
-[error] /app/app/models/SocialMediaCollect.scala:35:5: ambiguous reference to overloaded definition,
-[error] both method isActive in class SocialMediaCollect of type Boolean
-[error] and  variable isActive in class SocialMediaCollect of type Boolean
-[error] match expected type ?
-[error]     isActive = false
+[error] /app/app/models/SocialMediaMessage.scala:23:5: not found: value JodaWrites
+[error]     JodaWrites.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
 [error]     ^
-[error] /app/app/models/SocialMediaCollect.scala:32:7: method isActive is defined twice;
-[error]   the conflicting variable isActive was defined at line 14:15
-[error]   def isActive: Boolean = isActive
-[error]       ^
-[error] /app/app/models/SocialMediaMessage.scala:4:8: object DateTime is not a member of package java.time
-[error] import java.time.DateTime
-[error]        ^
-[error] /app/app/models/SocialMediaMessage.scala:12:14: not found: type DateTime
-[error]   createdAt: DateTime,
-[error]              ^
-[error] /app/app/models/SocialMediaMessage.scala:21:39: not found: type DateTime
-[error]   implicit val dateTimeFormat: Format[DateTime] = Format(
-[error]                                       ^
-[error] /app/app/models/SocialMediaMessage.scala:23:12: type mismatch;
-[error]  found   : play.api.libs.json.Writes[org.joda.time.DateTime]
-[error]  required: play.api.libs.json.JsValue
-[error]     Writes.jodaDateWrites
-[error]            ^
-[error] /app/app/models/SocialMediaMessage.scala:27:11: inferred type arguments [providers.ProviderType.type] do not conform to method enumNameReads's type parameter bounds [E <: Enumeration]
-[error]     Reads.enumNameReads(ProviderType),
-[error]           ^
-[error] /app/app/models/SocialMediaMessage.scala:27:25: type mismatch;
-[error]  found   : providers.ProviderType.type
-[error]  required: E
-[error]     Reads.enumNameReads(ProviderType),
-[error]                         ^
-[error] /app/app/models/SocialMediaMessage.scala:27:24: polymorphic expression cannot be instantiated to expected type;
-[error]  found   : [E <: Enumeration]play.api.libs.json.Reads[E#Value]
-[error]  required: play.api.libs.json.Reads[providers.ProviderType]
-[error]     Reads.enumNameReads(ProviderType),
-[error]                        ^
-[error] /app/app/models/SocialMediaMessage.scala:28:12: polymorphic expression cannot be instantiated to expected type;
-[error]  found   : [E <: Enumeration]play.api.libs.json.Writes[E#Value]
-[error]  required: play.api.libs.json.Writes[providers.ProviderType]
-[error]     Writes.enumNameWrites
-[error]            ^
-[error] /app/app/models/SocialMediaMessage.scala:31:71: No instance of play.api.libs.json.Format is available for scala.collection.immutable.Map[java.lang.String, scala.Any] in the implicit scope (Hint: if declared in the same file, make sure it's declared before
+[error] /app/app/models/SocialMediaMessage.scala:27:89: type Value is not a member of object providers.ProviderType
+[error]   implicit val providerTypeFormat: Format[ProviderType.Value] = new Format[ProviderType.Value] {
+[error]                                                                                         ^
+[error] /app/app/models/SocialMediaMessage.scala:28:53: type Value is not a member of object providers.ProviderType
+[error]     def reads(json: JsValue): JsResult[ProviderType.Value] = 
+[error]                                                     ^
+[error] /app/app/models/SocialMediaMessage.scala:31:43: type Value is not a member of object providers.ProviderType
+[error]     def writes(providerType: ProviderType.Value): JsValue = 
+[error]                                           ^
+[error] /app/app/models/SocialMediaMessage.scala:29:51: value withName is not a member of object providers.ProviderType
+[error]       json.validate[String].map(s => ProviderType.withName(s))
+[error]                                                   ^
+[error] /app/app/models/SocialMediaMessage.scala:38:21: type mismatch;
+[error]  found   : play.api.libs.json.OWrites[play.api.libs.json.MapWrites.Map[String,String]]
+[error]     (which expands to)  play.api.libs.json.OWrites[scala.collection.MapOps[String,String,[X, +Y]scala.collection.IterableOps[_, [X]Any, _],Any]]
+[error]  required: play.api.libs.json.Writes[Map[String,String]]
+[error] Note: play.api.libs.json.MapWrites.Map[String,String] >: Map[String,String], but trait Writes is invariant in type A.
+[error] You may wish to define A as -A instead. (SLS 4.5)
+[error]     Writes.mapWrites[String]
+[error]                     ^
+[error] /app/app/models/SocialMediaMessage.scala:41:71: No instance of play.api.libs.json.Format is available for providers.ProviderType in the implicit scope (Hint: if declared in the same file, make sure it's declared before)
 [error]   implicit val messageFormat: Format[SocialMediaMessage] = Json.format[SocialMediaMessage]
 [error]                                                                       ^
 [error] /app/app/providers/SocialMediaProvider.scala:3:8: object SocialMediaRule is not a member of package models
@@ -139,22 +103,24 @@
 [error]  required: String
 [error]               Left(error)
 [error]                    ^
-[error] /app/app/models/forms/AccountForm.scala:7:37: illegal cyclic reference involving object AccountForm
-[error] object AccountForm extends BaseForm[AccountForm.AccountData] {
-[error]                                     ^
-[error] /app/app/models/forms/AccountForm.scala:19:35: inferred type arguments [providers.ProviderType.type] do not conform to method enumFormatter's type parameter bounds [E <: Enumeration]
-[error]       "Provider Type" -> Forms.of(enumFormatter(ProviderType)),
-[error]                                   ^
-[error] /app/app/models/forms/AccountForm.scala:19:49: type mismatch;
-[error]  found   : providers.ProviderType.type
-[error]  required: E
-[error]       "Provider Type" -> Forms.of(enumFormatter(ProviderType)),
+[error] /app/app/models/forms/AccountForm.scala:9:30: type Value is not a member of object providers.ProviderType
+[error]   providerType: ProviderType.Value,
+[error]                              ^
+[error] /app/app/models/forms/AccountForm.scala:18:43: not found: type Formatter
+[error]   private val providerTypeFormatter = new Formatter[ProviderType.Value] {
+[error]                                           ^
+[error] /app/app/models/forms/AccountForm.scala:19:91: type Value is not a member of object providers.ProviderType
+[error]     def bind(key: String, data: Map[String, String]): Either[Seq[FormError], ProviderType.Value] = {
+[error]                                                                                           ^
+[error] /app/app/models/forms/AccountForm.scala:30:49: type Value is not a member of object providers.ProviderType
+[error]     def unbind(key: String, value: ProviderType.Value): Map[String, String] = 
 [error]                                                 ^
-[error] /app/app/models/forms/AccountForm.scala:23:38: missing argument list for method unapply in object AccountData
-[error] Unapplied methods are only converted to functions when a function type is expected.
-[error] You can make this conversion explicit by writing `unapply _` or `unapply(_)` instead of `unapply`.
-[error]     )(AccountData.apply)(AccountData.unapply)
-[error]                                      ^
+[error] /app/app/models/forms/AccountForm.scala:22:30: value withName is not a member of object providers.ProviderType
+[error]           Right(ProviderType.withName(value))
+[error]                              ^
+[error] /app/app/models/forms/AccountForm.scala:34:59: type Value is not a member of object providers.ProviderType
+[error]   private val providerTypeMapping = Forms.of[ProviderType.Value](providerTypeFormatter)
+[error]                                                           ^
 [error] /app/app/models/tweet/Tweet.scala:128:32: not found: value GetJson
 [error] 					val key: Option[String] = GetJson.optionString(mediaJson \ "media_key")
 [error] 					                          ^
@@ -182,27 +148,16 @@
 [error] /app/app/models/tweet/Tweet.scala:136:36: not found: value GetJson
 [error] 					val altText: Option[String] = GetJson.optionString(mediaJson \ "alt_text")
 [error] 					                              ^
-[error] /app/app/models/twitter/TwitterAccount.scala:20:57: type mismatch;
+[error] /app/app/models/twitter/TwitterAccount.scala:21:57: type mismatch;
 [error]  found   : models.twitter.TwitterAccount
 [error]  required: models.Account
 [error]   private val twitterConnection = new TwitterConnection(this)
 [error]                                                         ^
-[error] /app/app/models/twitter/TwitterAccount.scala:47:71: type mismatch;
+[error] /app/app/models/twitter/TwitterAccount.scala:48:71: type mismatch;
 [error]  found   : models.twitter.TwitterCollect
 [error]  required: models.Collect
 [error]       val result = twitterConnection.startCollect(collect.asInstanceOf[TwitterCollect])
 [error]                                                                       ^
-[error] /app/app/models/twitter/TwitterAccount.scala:87:16: type mismatch;
-[error]  found   : java.time.LocalDateTime
-[error]  required: org.joda.time.DateTime
-[error]           rule.createdAt
-[error]                ^
-[error] /app/app/models/twitter/TwitterAccount.scala:185:25: value executeListeners is not a member of twitter.TweetStreamListener
-[error]     tweetStreamListener.executeListeners()
-[error]                         ^
-[error] /app/app/models/twitter/TwitterAccount.scala:192:47: value isActive is not a member of twitter.TweetStreamListener
-[error]   def isActive: Boolean = tweetStreamListener.isActive
-[error]                                               ^
 [error] /app/app/models/twitter/TwitterAccountForm.scala:33:22: value password is not a member of models.twitter.TwitterAccount
 [error]       twitterAccount.password,
 [error]                      ^
@@ -224,12 +179,16 @@
 [error] /app/app/modules/MessageAdapter.scala:62:24: value username is not a member of models.tweet.User
 [error]         tweet.user.get.username.getOrElse(tweet.userId.getOrElse("unknown"))
 [error]                        ^
-[error] /app/app/modules/dao/ModuleFileProcessedDao.scala:21:67: private class ModulesFilesProcessedTable escapes its defining scope as part of type ModuleFileProcessedDao.this.profile.api.Query[ModuleFileProcessedDao.this.ModulesFilesProcessedTable,modules.ModuleFileProcessed,Seq]
-[error] 	override protected def filterById(id: (String, String, String)): Query[ModulesFilesProcessedTable, ModuleFileProcessed, Seq] =
-[error] 	                                                                 ^
-[error] /app/app/modules/dao/ModuleFileProcessedDao.scala:19:25: private class ModulesFilesProcessedTable escapes its defining scope as part of type slick.lifted.TableQuery[ModuleFileProcessedDao.this.ModulesFilesProcessedTable]
-[error] 	override protected val tableQuery = TableQuery[ModulesFilesProcessedTable]
-[error] 	                       ^
+[error] /app/app/modules/MessageAdapter.scala:73:20: type mismatch;
+[error]  found   : scala.collection.immutable.Map[String,Any]
+[error]  required: Map[String,String]
+[error]         metadata = metadata
+[error]                    ^
+[error] /app/app/modules/MessageAdapter.scala:115:20: type mismatch;
+[error]  found   : scala.collection.immutable.Map[String,Any]
+[error]  required: Map[String,String]
+[error]         metadata = metadata
+[error]                    ^
 [error] /app/app/modules/exporter/postgresql/PostgresDao.scala:99:12: value publishedTime is not a member of models.tweet.Tweet
 [error] did you mean publishedTimeMs?
 [error] 			${tweet.publishedTime},
@@ -373,13 +332,49 @@
 [error]  required: String
 [error] 				'${escapeSQL(annotations(i).normalizedText)}',
 [error] 				                            ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:365:22: value startIndice is not a member of models.tweet.Annotation
+[error] 				${annotations(i).startIndice},
+[error] 				                 ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:366:22: value endIndice is not a member of models.tweet.Annotation
+[error] 				${annotations(i).endIndice})
+[error] 				                 ^
+[error] /app/app/modules/exporter/postgresql/PostgresDao.scala:427:41: value getOrElse is not a member of scala.collection.immutable.Iterable[String]
+[error] 				'${message.metadata.map(_.toString).getOrElse("{}")}')
+[error] 				                                    ^
+[error] /app/app/modules/exporter/postgresql/PostgresFileListener.scala:34:42: value asScala is not a member of java.util.List[java.nio.file.WatchEvent[_]]
+[error]           for (event <- key.pollEvents().asScala) {
+[error]                                          ^
+[error] /app/app/modules/exporter/postgresql/PostgresFileReader.scala:21:18: type mismatch;
+[error]  found   : String("twitter")
+[error]  required: providers.ProviderType
+[error]             case "twitter" =>
+[error]                  ^
+[error] /app/app/modules/exporter/postgresql/PostgresFileReader.scala:23:18: type mismatch;
+[error]  found   : String("bluesky")
+[error]  required: providers.ProviderType
+[error]             case "bluesky" =>
+[error]                  ^
+[error] /app/app/modules/exporter/postgresql/PostgresFullFileReader.scala:22:18: value processMessage is not a member of Module
+[error]           module.processMessage(message)
+[error]                  ^
+[error] /app/app/modules/exporter/postgresql/PostgresInsertion.scala:25:29: value coordinates is not a member of models.tweet.Tweet
+[error] 					"coordinates" -> tweet.coordinates.map(c => Map(
+[error] 					                       ^
+[error] /app/app/modules/exporter/postgresql/PostgresInsertion.scala:37:26: type mismatch;
+[error]  found   : Option[String]
+[error]  required: String
+[error] 						'${escapeSQL(tweet.text)}',
+[error] 						                   ^
+[error] /app/app/modules/exporter/postgresql/PostgresModule.scala:25:58: value observableFile is not a member of models.SocialCollect
+[error] 	private val listener = new PostgresFileListener(collect.observableFile, config, this)
+[error] 	                                                        ^
 [error] 100 errors found
 [error] (Compile / compileIncremental) Compilation failed
-2025-03-21 13:52:25 ERROR play.api.http.DevHttpErrorHandler  
+2025-03-21 14:03:26 ERROR play.api.http.DevHttpErrorHandler  
 
-! @88onf2ao2 - Internal server error, for (GET) [/] ->
+! @88onge11o - Internal server error, for (GET) [/] ->
  
-play.sbt.PlayExceptions$CompilationException: Compilation error[object FakeRequest is not a member of package play.api.test]
+play.sbt.PlayExceptions$CompilationException: Compilation error[value map is not a member of Long]
 	at play.sbt.PlayExceptions$CompilationException$.apply(PlayExceptions.scala:34)
 	at play.sbt.PlayExceptions$CompilationException$.apply(PlayExceptions.scala:34)
 	at scala.Option.map(Option.scala:230)

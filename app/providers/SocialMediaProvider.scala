@@ -1,11 +1,11 @@
 package providers
 
-import models.{SocialMediaAccount, SocialMediaCollect, SocialMediaRule, SocialMediaMessage}
-import java.time.DateTime
+import models.{SocialMediaAccount, SocialMediaCollect, SocialMediaMessage}
+import org.joda.time.DateTime
 
 trait SocialMediaProvider {
   // Identifiant du type de provider (Twitter, Bluesky, etc.)
-  def providerType: ProviderType
+  def providerType: ProviderType.ProviderType
   
   // Crée une connexion pour ce provider avec les identifiants spécifiés
   def createConnection(account: SocialMediaAccount): Either[String, StreamingConnection]

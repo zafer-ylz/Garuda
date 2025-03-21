@@ -16,7 +16,7 @@ object MessageAdapter extends Logging {
   /**
    * Convertit un message brut en SocialMediaMessage normalisé
    */
-  def convertMessage(rawMessage: String, providerType: ProviderType): Option[SocialMediaMessage] = {
+  def convertMessage(rawMessage: String, providerType: ProviderType.ProviderType): Option[SocialMediaMessage] = {
     try {
       providerType match {
         case ProviderType.Twitter => convertTwitterMessage(rawMessage)
@@ -44,22 +44,24 @@ object MessageAdapter extends Logging {
       }
       
       // Extracting metadata
-      val metadata = Map[String, Any](
+      val metadata = Map[String, String](
         "source" -> tweet.source.getOrElse(""),
         "lang" -> tweet.lang.getOrElse(""),
-        "replyCount" -> tweet.replyCount.getOrElse(0),
-        "retweetCount" -> tweet.retweetCount.getOrElse(0),
-        "likeCount" -> tweet.likeCount.getOrElse(0),
-        "quoteCount" -> tweet.quoteCount.getOrElse(0),
-        "isRetweet" -> tweet.isRetweet,
-        "isQuote" -> tweet.isQuote,
-        "hashtags" -> tweet.hashtags.map(_.tag.getOrElse("")).mkString(","),
+        "replyCount" -> tweet.replyCount.getOrElse(0).toString,
+        "retweetCount" -> tweet.retweetCount.getOrElse(0).toString,
+        "likeCount" -> tweet.likeCount.getOrElse(0).toString,
+        "quoteCount" -> tweet.quoteCount.getOrElse(0).toString,
+        "isRetweet" -> tweet.isRetweet.toString,
+        "isQuote" -> tweet.isQuote.toString,
+        "hashtags" -> tweet.hashtags.map(h => 
+          h.text.getOrElse(h.toString)
+        ).mkString(","),
         "urls" -> tweet.urls.map(_.url.getOrElse("")).mkString(",")
       )
       
       // Extracting user
       val author = if (tweet.user.isDefined) {
-        tweet.user.get.username.getOrElse(tweet.userId.getOrElse("unknown"))
+        tweet.user.get.screen_name.getOrElse(tweet.userId.getOrElse("unknown"))
       } else {
         tweet.userId.getOrElse("unknown")
       }
@@ -99,11 +101,11 @@ object MessageAdapter extends Logging {
       val createdAtStr = (json \ "indexedAt").asOpt[String].getOrElse(DateTime.now().toString())
       
       // Extracting metadata
-      val metadata = Map[String, Any](
-        "replyCount" -> (json \ "replyCount").asOpt[Int].getOrElse(0),
-        "repostCount" -> (json \ "repostCount").asOpt[Int].getOrElse(0),
-        "likeCount" -> (json \ "likeCount").asOpt[Int].getOrElse(0),
-        "isRepost" -> (json \ "viewer" \ "reposted").asOpt[Boolean].getOrElse(false)
+      val metadata = Map[String, String](
+        "replyCount" -> (json \ "replyCount").asOpt[Int].getOrElse(0).toString,
+        "repostCount" -> (json \ "repostCount").asOpt[Int].getOrElse(0).toString,
+        "likeCount" -> (json \ "likeCount").asOpt[Int].getOrElse(0).toString,
+        "isRepost" -> (json \ "viewer" \ "reposted").asOpt[Boolean].getOrElse(false).toString
       )
       
       Some(SocialMediaMessage(

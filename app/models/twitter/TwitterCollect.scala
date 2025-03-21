@@ -5,7 +5,6 @@ import providers.{ProviderType, SocialMediaRule}
 import providers.twitter.TwitterRule
 import twitter.ObservableFile
 import org.joda.time.DateTime
-import java.time.LocalDateTime
 
 /**
  * Implémentation d'une collecte Twitter.
@@ -92,13 +91,7 @@ case class TwitterCollect(
       rule.tag,
       rule.content,
       rule.collectName,
-      new DateTime(
-        rule.createdAt.getYear,
-        rule.createdAt.getMonthValue,
-        rule.createdAt.getDayOfMonth,
-        rule.createdAt.getHour,
-        rule.createdAt.getMinute
-      )
+      rule.createdAt
     )
   }
   
@@ -106,20 +99,13 @@ case class TwitterCollect(
    * Convertit un TwitterRule en Rule
    */
   def convertToRule(rule: TwitterRule): models.Rule = {
-    val ruleId = rule.id.map(_.toLong).getOrElse(-1L)
+    val ruleId = rule.id.flatMap(s => try { Some(s.toLong) } catch { case _: NumberFormatException => None }).getOrElse(-1L)
     val newRule = models.Rule(
       ruleId,
       rule.tag, 
       rule.content, 
       rule.collectName,
-      LocalDateTime.of(
-        rule.createdAt.getYear,
-        rule.createdAt.getMonthOfYear,
-        rule.createdAt.getDayOfMonth,
-        rule.createdAt.getHourOfDay,
-        rule.createdAt.getMinuteOfHour,
-        rule.createdAt.getSecondOfMinute
-      )
+      rule.createdAt
     )
     newRule.setActive(rule.isActive)
     newRule
