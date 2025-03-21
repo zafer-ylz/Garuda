@@ -12,6 +12,7 @@ import play.api.data._
 import play.api.mvc._
 import play.filters.csrf._
 import services.ProviderManager
+import play.api.test.FakeRequest
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -221,7 +222,7 @@ class CollectController @Inject()(
 			// Retrieve the rules of the collect
 			Await.result(ruleDao.findByCollectName(collectName).map { rules =>
 				temporaryRulesDao.findByCollectName(collectName).map { temporaryRules =>
-					collect.initRules(rules, temporaryRules)
+					collect.initRules(rules.toList, temporaryRules.toList)
 				}
 			}, Duration.Inf)
 			// Update the rules of the account
@@ -268,8 +269,8 @@ class CollectController @Inject()(
 		accountDao.all().map { accounts =>
 			accountDao.findByName(collect.accountName).map {
 				case Some(account) => {
-					implicit val request = Request(FakeRequest(), "")
-					val token = CSRF.getToken(request).get
+					// Utilisation d'un simple FakeRequest sans message provider spécifique
+					val token = CSRF.getToken(request).getOrElse(CSRF.Token("csrfToken", ""))
 					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
 						postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), token.value)).flashing(flash)
 				}

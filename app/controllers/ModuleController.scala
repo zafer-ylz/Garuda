@@ -113,7 +113,8 @@ class ModuleController @Inject()(postgresConfigurationDao: PostgresConfiguration
 			val postgresConfiguration = Await.result(postgresConfigurationDao.findByCollect(collectName), Duration.Inf)
 			if (postgresConfiguration.isDefined) {
 				val collect = Await.result(collectDao.findByName(collectName), Duration.Inf).get
-				val module = new PostgresModule(collect, postgresConfiguration.get, moduleFileProcessedDao)
+				val adaptedCollect = collect.adaptToSocialCollect
+				val module = new PostgresModule(adaptedCollect, postgresConfiguration.get.toPostgresConfig, moduleFileProcessedDao)
 				ModuleCache.add(collectName, module)
 				Redirect(routes.ModuleController.seeModules(collectName)).flashing("success" -> "PostgreSQL exporter module started!")
 			} else {

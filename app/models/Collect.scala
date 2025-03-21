@@ -3,8 +3,9 @@ package models
 import java.time.LocalDateTime
 
 import providers.{ProviderType, SocialMediaRule}
-import providers.twitter.{TwitterRule, TwitterCollect}
-import services.Twitter
+import providers.twitter.TwitterRule
+import org.joda.time.DateTime
+import models.twitter.TwitterCollect
 
 import scala.collection.mutable
 
@@ -15,11 +16,9 @@ trait RuleContainer {
 	def temporaryRules: Option[List[TemporaryRule]]
 }
 
-class Collect(val name: String, val directory: String, val accountName: String, val providerType: ProviderType, val isActive: Boolean = false) extends RuleContainer {
+class Collect(val name: String, val directory: String, val accountName: String, val providerType: ProviderType, val isActive: Boolean = false, val createdAt: DateTime = new DateTime()) extends RuleContainer {
 	private var _rules: Option[List[Rule]] = None
 	private var _temporaryRules: Option[List[TemporaryRule]] = None
-	
-	private val twitterAdapter = new TwitterCollect(name, directory, accountName)
 	
 	// Méthodes d'adaptation entre Rule et SocialMediaRule
 	private def adaptRule(rule: Rule): SocialMediaRule = {
@@ -92,12 +91,64 @@ class Collect(val name: String, val directory: String, val accountName: String, 
 		_temporaryRules = Some(rules)
 	}
 	
-	// Pour la compatibilité avec l'ancien code
+	/**
+	 * Pour la compatibilité avec l'ancien code
+	 */
 	def adaptToSocialCollect: SocialCollect = {
 		providerType match {
-			case ProviderType.Twitter => twitterAdapter
-			case _ => throw new UnsupportedOperationException(s"Provider ${providerType} not supported")
+			case ProviderType.Twitter => 
+				val twitterCollect = new TwitterCollect(name, directory, accountName)
+				// Si nous avons des règles, on les adapte
+				if (_rules.isDefined) {
+					val adaptedRules = adaptRules(_rules.get)
+					twitterCollect.initRules(adaptedRules)
+				}
+				// Si nous avons des règles temporaires, on les adapte
+				if (_temporaryRules.isDefined) {
+					twitterCollect.setTemporaryRules(_temporaryRules.get)
+				}
+				twitterCollect.setActive(isActive)
+				twitterCollect
+			case _ => 
+				throw new UnsupportedOperationException(s"Provider ${providerType} not supported")
 		}
+	}
+	
+	/**
+	 * Fonction copy pour créer une nouvelle instance avec des paramètres modifiés
+	 */
+	def copy(newName: String = this.name, 
+			 newDirectory: String = this.directory, 
+			 newAccountName: String = this.accountName, 
+			 newProviderType: ProviderType = this.providerType,
+			 newIsActive: Boolean = this.isActive,
+			 newCreatedAt: DateTime = this.createdAt): Collect = {
+		new Collect(newName, newDirectory, newAccountName, newProviderType, newIsActive, newCreatedAt)
+	}
+	
+	/**
+	 * Propriété pour accéder à accountName comme account pour compatibilité
+	 */
+	def account: String = accountName
+}
+
+/**
+ * Objet companion pour créer des instances de Collect
+ */
+object Collect {
+	/**
+	 * Méthode apply pour créer une instance de Collect
+	 */
+	def apply(name: String, directory: String, account: String, createdAt: DateTime): Collect = {
+		// Par défaut, on suppose que c'est Twitter puisque c'était le premier provider supporté
+		new Collect(name, directory, account, ProviderType.Twitter, false, createdAt)
+	}
+	
+	/**
+	 * Méthode unapply pour l'extraction de pattern
+	 */
+	def unapply(collect: Collect): Option[(String, String, String, DateTime)] = {
+		Some((collect.name, collect.directory, collect.accountName, collect.createdAt))
 	}
 }
 
