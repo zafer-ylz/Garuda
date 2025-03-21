@@ -16,11 +16,11 @@ trait BaseForm[T] {
   /**
    * Méthode utilitaire pour créer un formatter pour un type énuméré
    */
-  protected def enumFormatter[E <: Enumeration](enum: E): Formatter[E#Value] = new Formatter[E#Value] {
+  protected def enumFormatter[E <: Enumeration](`enum`: E): Formatter[E#Value] = new Formatter[E#Value] {
     override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], E#Value] = {
       data.get(key)
         .map(s => try {
-          Right(enum.withName(s))
+          Right(`enum`.withName(s))
         } catch {
           case _: NoSuchElementException => Left(Seq(FormError(key, "error.enum.invalid", Nil)))
         })

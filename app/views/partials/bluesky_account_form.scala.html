@@ -12,27 +12,27 @@
                 <div class="mb-3">
                     @helper.inputText(
                         form("name"),
-                        'class -> "form-control",
-                        '_label -> "Nom du compte",
-                        'placeholder -> "Mon compte Bluesky"
+                        Symbol("class") -> "form-control",
+                        Symbol("_label") -> "Nom du compte",
+                        Symbol("placeholder") -> "Mon compte Bluesky"
                     )
                 </div>
                 
                 <div class="mb-3">
                     @helper.inputText(
                         form("identifier"),
-                        'class -> "form-control",
-                        '_label -> "Identifiant Bluesky",
-                        'placeholder -> "handle.bsky.social"
+                        Symbol("class") -> "form-control",
+                        Symbol("_label") -> "Identifiant Bluesky",
+                        Symbol("placeholder") -> "handle.bsky.social"
                     )
                 </div>
                 
                 <div class="mb-3">
                     @helper.inputPassword(
                         form("password"),
-                        'class -> "form-control",
-                        '_label -> "Mot de passe",
-                        'placeholder -> "••••••••"
+                        Symbol("class") -> "form-control",
+                        Symbol("_label") -> "Mot de passe",
+                        Symbol("placeholder") -> "••••••••"
                     )
                 </div>
                 
