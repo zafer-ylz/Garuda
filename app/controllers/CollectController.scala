@@ -10,6 +10,7 @@ import play.api.data._
 import play.api.mvc._
 import play.filters.csrf._
 import services.ProviderManager
+import providers.SocialMediaRule
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}

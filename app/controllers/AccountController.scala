@@ -37,33 +37,33 @@ class AccountController @Inject()(
 		)(BlueskyAccountForm.apply)(BlueskyAccountForm.unapply)
 	)
 	
-	def index() = Action { implicit request: Request[AnyContent] =>
+	def index = Action { implicit request: Request[AnyContent] =>
 		val accounts = accountService.getAllAccounts
 		Ok(views.html.accounts.index(accounts, twitterForm, blueskyForm))
 	}
 	
-	def createTwitterAccount() = Action { implicit request: Request[AnyContent] =>
-		twitterForm.bindFromRequest.fold(
+	def createTwitterAccount = Action { implicit request: Request[AnyContent] =>
+		twitterForm.bindFromRequest().fold(
 			formWithErrors => {
 				val accounts = accountService.getAllAccounts
 				BadRequest(views.html.accounts.index(accounts, formWithErrors, blueskyForm))
 			},
 			accountData => {
 				accountService.createTwitterAccount(accountData)
-				Redirect(routes.AccountController.index()).flashing("success" -> "Compte Twitter créé avec succès")
+				Redirect(routes.AccountController.index).flashing("success" -> "Compte Twitter créé avec succès")
 			}
 		)
 	}
 	
-	def createBlueskyAccount() = Action { implicit request: Request[AnyContent] =>
-		blueskyForm.bindFromRequest.fold(
+	def createBlueskyAccount = Action { implicit request: Request[AnyContent] =>
+		blueskyForm.bindFromRequest().fold(
 			formWithErrors => {
 				val accounts = accountService.getAllAccounts
 				BadRequest(views.html.accounts.index(accounts, twitterForm, formWithErrors))
 			},
 			accountData => {
 				accountService.createBlueskyAccount(accountData)
-				Redirect(routes.AccountController.index()).flashing("success" -> "Compte Bluesky créé avec succès")
+				Redirect(routes.AccountController.index).flashing("success" -> "Compte Bluesky créé avec succès")
 			}
 		)
 	}
@@ -91,19 +91,19 @@ class AccountController @Inject()(
 			case Some(account) =>
 				account.providerType match {
 					case ProviderType.Twitter =>
-						twitterForm.bindFromRequest.fold(
+						twitterForm.bindFromRequest().fold(
 							formWithErrors => BadRequest(views.html.accounts.edit(account, formWithErrors)),
 							accountData => {
 								accountService.updateTwitterAccount(id, accountData)
-								Redirect(routes.AccountController.index()).flashing("success" -> "Compte Twitter mis à jour avec succès")
+								Redirect(routes.AccountController.index).flashing("success" -> "Compte Twitter mis à jour avec succès")
 							}
 						)
 					case ProviderType.Bluesky =>
-						blueskyForm.bindFromRequest.fold(
+						blueskyForm.bindFromRequest().fold(
 							formWithErrors => BadRequest(views.html.accounts.edit(account, formWithErrors)),
 							accountData => {
 								accountService.updateBlueskyAccount(id, accountData)
-								Redirect(routes.AccountController.index()).flashing("success" -> "Compte Bluesky mis à jour avec succès")
+								Redirect(routes.AccountController.index).flashing("success" -> "Compte Bluesky mis à jour avec succès")
 							}
 						)
 					case _ =>
@@ -116,6 +116,25 @@ class AccountController @Inject()(
 	
 	def delete(id: String) = Action { implicit request: Request[AnyContent] =>
 		accountService.deleteAccount(id)
-		Redirect(routes.AccountController.index()).flashing("success" -> "Compte supprimé avec succès")
+		Redirect(routes.AccountController.index).flashing("success" -> "Compte supprimé avec succès")
+	}
+	
+	// Méthodes anciennes, maintenues pour compatibilité
+	def listAccounts = Action { implicit request: Request[AnyContent] =>
+		Redirect(routes.AccountController.index)
+	}
+	
+	def createAccount = Action { implicit request: Request[AnyContent] =>
+		Redirect(routes.AccountController.index)
+	}
+	
+	def removeAccount(accountName: String) = Action { implicit request: Request[AnyContent] =>
+		// Logique de suppression de compte par nom (à implémenter si nécessaire)
+		Redirect(routes.AccountController.index)
+	}
+	
+	def updateAccount(accountName: String) = Action { implicit request: Request[AnyContent] =>
+		// Logique de mise à jour de compte par nom (à implémenter si nécessaire)
+		Redirect(routes.AccountController.index)
 	}
 }

@@ -1,4 +1,8 @@
-@(accounts: Seq[SocialAccount], twitterForm: Form[TwitterAccountForm], blueskyForm: Form[BlueskyAccountForm])
+@(accounts: Seq[SocialAccount], twitterForm: Form[models.twitter.TwitterAccountForm], blueskyForm: Form[models.bluesky.BlueskyAccountForm])
+
+@import models.twitter.TwitterAccountForm
+@import models.bluesky.BlueskyAccountForm
+@import providers.ProviderType
 
 @main("Gestion des comptes") {
     <div class="container mt-4">
@@ -39,10 +43,10 @@
                                                     </span>
                                                 </h5>
                                                 <div class="btn-group">
-                                                    <a href="@routes.AccountController.edit(account.id)" class="btn btn-sm btn-outline-primary">
+                                                    <a href="@routes.AccountController.edit(account.id.getOrElse(""))" class="btn btn-sm btn-outline-primary">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <a href="@routes.AccountController.delete(account.id)" class="btn btn-sm btn-outline-danger" 
+                                                    <a href="@routes.AccountController.delete(account.id.getOrElse(""))" class="btn btn-sm btn-outline-danger" 
                                                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
                                                         <i class="fas fa-trash"></i>
                                                     </a>
@@ -54,8 +58,8 @@
                                                 </small>
                                             </p>
                                             <div class="mt-2">
-                                                <span class="badge bg-@(if(account.isActive) "success" else "warning")">
-                                                    @if(account.isActive) {Actif} else {Inactif}
+                                                <span class="badge bg-@(if(account.hasActiveCollect) "success" else "warning")">
+                                                    @if(account.hasActiveCollect) {Actif} else {Inactif}
                                                 </span>
                                             </div>
                                         </div>

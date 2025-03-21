@@ -126,7 +126,11 @@ case class TwitterAccount(
   def getBearerToken: String = bearerToken
   
   override def cancel(): Boolean = {
-    tweetStreamListener.isActive
+    if (currentActiveCollect.isDefined) {
+      currentActiveCollect.get.isActive
+    } else {
+      false
+    }
   }
 }
 

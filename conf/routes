@@ -7,7 +7,15 @@
 GET     /                                           controllers.HomeController.index()
 
 # Accounts
-GET     /accounts                                   controllers.AccountController.listAccounts
+GET     /accounts                                   controllers.AccountController.index
+POST    /accounts/twitter                           controllers.AccountController.createTwitterAccount
+POST    /accounts/bluesky                           controllers.AccountController.createBlueskyAccount
+GET     /accounts/edit/:id                          controllers.AccountController.edit(id: String)
+POST    /accounts/update/:id                        controllers.AccountController.update(id: String)
+GET     /accounts/delete/:id                        controllers.AccountController.delete(id: String)
+
+# Legacy account routes
+GET     /accounts/list                              controllers.AccountController.listAccounts
 POST    /accounts                                   controllers.AccountController.createAccount
 POST    /accounts/:accountName/remove               controllers.AccountController.removeAccount(accountName: String)
 POST    /accounts/:accountName/update               controllers.AccountController.updateAccount(accountName: String)

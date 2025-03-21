@@ -1,4 +1,6 @@
-@(form: Form[TwitterAccountForm])
+@(form: Form[models.twitter.TwitterAccountForm])
+
+@import models.twitter.TwitterAccountForm
 
 <div id="Twitter-form" class="provider-specific-form" style="display: none;">
     <div class="card">
@@ -6,7 +8,7 @@
             <h5 class="mb-0">Configuration du compte Twitter</h5>
         </div>
         <div class="card-body">
-            @helper.form(action = routes.AccountController.createTwitterAccount()) {
+            @helper.form(action = routes.AccountController.createTwitterAccount) {
                 @helper.CSRF.formField
                 
                 <div class="mb-3">
