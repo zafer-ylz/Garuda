@@ -1,14 +1,36 @@
-// Ce fichier est obsolète car remplacé par providers.SocialMediaRule
-// La classe Rule a été migrée vers le package providers pour une meilleure cohérence
+// Ce fichier est maintenu pour des raisons de compatibilité avec l'ancien code.
+// Pour les nouveaux développements, utiliser providers.SocialMediaRule à la place.
 
 package models
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
-case class Rule(id: Long, tag: String, content: String, collect: String, createdAt: DateTime = DateTime.now()) {
+case class Rule(id: Long, tag: String, content: String, collectName: String, createdAt: LocalDateTime = LocalDateTime.now()) {
 	/**
 	 * A rule is active when it is currently known by Twitter API.
 	 */
-	var isActive: Boolean = false
+	private var _isActive: Boolean = false
+	
+	/**
+	 * Définit si la règle est active
+	 */
+	def setActive(active: Boolean): Unit = {
+		_isActive = active
+	}
+	
+	/**
+	 * Indique si la règle est active
+	 */
+	def isActive: Boolean = _isActive
+	
+	/**
+	 * Accesseur pour la compatibilité avec collectName/collect
+	 */
+	def collect: String = collectName
+	
+	/**
+	 * Propriété pour l'accès via la nouvelle architecture
+	 */
+	def active: Boolean = _isActive
 }
 

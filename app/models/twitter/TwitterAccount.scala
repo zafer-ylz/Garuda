@@ -1,9 +1,9 @@
 package models.twitter
 
-import models.{BaseAccount, SocialCollect, AccountType}
+import models.{BaseAccount, Collect, SocialCollect, Rule, TemporaryRule, AccountType}
 import providers.{ProviderType, SocialMediaRule, StreamingConnection}
 import providers.twitter.{TwitterProvider, TwitterRule}
-import twitter.TwitterConnection
+import twitter.{TwitterConnection, TweetStreamListener}
 import org.joda.time.DateTime
 import scala.collection.JavaConverters._
 
@@ -50,7 +50,7 @@ case class TwitterAccount(
         currentActiveCollect = Some(connection)
         Right(connection)
       } else {
-        Left(result.left.getOrElse("Unknown error starting collect"))
+        result.asInstanceOf[Either[String, StreamingConnection]]
       }
     } else {
       Left(s"The collect ${currentActiveCollect.get.collect.name} is already active.")
@@ -61,7 +61,6 @@ case class TwitterAccount(
     if (currentActiveCollect.isDefined && currentActiveCollect.get.collect.name == collect.name) {
       currentActiveCollect.get.shutdown()
       currentActiveCollect = None
-      collect.close()
       true
     } else {
       false
@@ -79,10 +78,16 @@ case class TwitterAccount(
   override def retrieveActiveRules(collectName: String): Either[String, Seq[SocialMediaRule]] = {
     val activeRules = twitterConnection.getAllRules(collectName)
     if (activeRules.isRight) {
-      val convertedRules = activeRules.getOrElse(Seq.empty).map(rule => 
-        TwitterRule(Some(rule.id), rule.tag, rule.content, collectName, rule.createdAt)
+      val rulesConverted = activeRules.right.get.map(rule => 
+        new TwitterRule(
+          Option(rule.id.toString),
+          rule.tag,
+          rule.content,
+          rule.collect,
+          rule.createdAt
+        )
       )
-      rules = Some(convertedRules)
+      rules = Some(rulesConverted)
       Right(rules.get)
     } else {
       Left(activeRules.left.getOrElse("Problem with Twitter API"))
@@ -90,59 +95,64 @@ case class TwitterAccount(
   }
   
   override def addRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]] = {
-    val twitterRules = rules.collect {
-      case rule: TwitterRule => rule
-      case rule => TwitterRule(rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt)
-    }
+    // Adaptation pour l'ancienne API
+    val temporaryRulesList = Seq.empty[models.TemporaryRule]
+    val rulesList = rules.map(rule => 
+      models.Rule(
+        rule.id.map(_.toLong).getOrElse(-1L),
+        rule.tag,
+        rule.content,
+        rule.collectName
+      )
+    )
     
-    val addedRules = twitterConnection.addRules(collectName, Seq.empty, twitterRules.collect { 
-      case r: models.Rule => r 
-    })
+    val addedRules = twitterConnection.addRules(collectName, temporaryRulesList, rulesList.toList)
     
     if (addedRules.isRight) {
-      this.rules = Some(addedRules.getOrElse(Seq.empty).map(rule => 
-        TwitterRule(Some(rule.id), rule.tag, rule.content, rule.collect, rule.createdAt)
-      ))
+      val convertedRules = addedRules.right.get.map(rule => 
+        new TwitterRule(
+          Option(rule.id.toString),
+          rule.tag,
+          rule.content,
+          rule.collectName,
+          rule.createdAt
+        )
+      )
+      this.rules = Some(convertedRules)
+      Right(convertedRules)
+    } else {
+      Left(addedRules.left.getOrElse("Problem adding rules"))
     }
-    
-    addedRules.map(_.map(rule => 
-      TwitterRule(Some(rule.id), rule.tag, rule.content, rule.collect, rule.createdAt)
-    ))
   }
   
   override def removeRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]] = {
-    val twitterRules = rules.collect {
-      case rule: TwitterRule => rule
-      case rule => TwitterRule(rule.id, rule.tag, rule.content, rule.collectName, rule.createdAt)
-    }
+    // Conversion des règles pour l'ancienne API
+    val rulesList = rules.map(rule => 
+      models.Rule(
+        rule.id.map(_.toLong).getOrElse(-1L),
+        rule.tag,
+        rule.content,
+        rule.collectName
+      )
+    )
     
-    twitterConnection.removeRules(twitterRules.collect { case r: models.Rule => r })
-    retrieveActiveRules(collectName)
+    val removedRules = twitterConnection.removeRules(rulesList.toList)
+    val refreshedRules = retrieveActiveRules(collectName)
+    
+    refreshedRules
   }
   
-  /**
-   * Méthode pour obtenir le token bearer (spécifique à Twitter)
-   */
-  def getBearerToken: String = bearerToken
+  override def getActiveRules: Seq[SocialMediaRule] = {
+    rules.getOrElse(Seq.empty)
+  }
   
-  /**
-   * Méthode pour obtenir les règles actives
-   */
-  def getActiveRules: Seq[SocialMediaRule] = rules.getOrElse(Seq.empty)
-  
-  /**
-   * Méthode pour obtenir le type de provider
-   */
-  def getProviderType: ProviderType = providerType
-  
-  /**
-   * Méthode pour obtenir la longueur maximale de règle autorisée pour ce compte
-   */
-  def getMaxRuleLength: Int = 1024 // Valeur exemple, à ajuster selon les besoins
+  override def getMaxRuleLength: Int = accountType.sizeOfRule
   
   override def cancel(): Boolean = {
     if (currentActiveCollect.isDefined) {
-      currentActiveCollect.get.isActive
+      currentActiveCollect.get.shutdown()
+      currentActiveCollect = None
+      true
     } else {
       false
     }
@@ -153,7 +163,7 @@ case class TwitterAccount(
  * Classe qui adapte un TweetStreamListener à l'interface StreamingConnection
  */
 class TwitterStreamConnection(
-  val tweetStreamListener: twitter.TweetStreamListener, 
+  val tweetStreamListener: TweetStreamListener, 
   val collect: SocialCollect
 ) extends StreamingConnection {
   override def stream(): StreamingConnection = {
@@ -169,7 +179,5 @@ class TwitterStreamConnection(
     tweetStreamListener.shutdown()
   }
   
-  override def isActive: Boolean = {
-    tweetStreamListener.isActive
-  }
+  def isActive: Boolean = tweetStreamListener.isActive
 } 

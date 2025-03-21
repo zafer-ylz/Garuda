@@ -1,72 +1,107 @@
 package models
 
-import org.joda.time.DateTime
-import twitter.ObservableFile
+import java.time.LocalDateTime
 
-case class Collect(name: String, directory: String, var account: String, createdAt: DateTime = DateTime.now()) {
-	var rules: Option[Seq[Rule]] = None
-	var temporaryRules: Option[Seq[TemporaryRule]] = None
-	var isActive: Boolean = false
-	var observableFile: ObservableFile = new ObservableFile(None)
+import providers.{ProviderType, SocialMediaRule}
+import providers.twitter.{TwitterRule, TwitterCollect}
+import services.Twitter
+
+import scala.collection.mutable
+
+trait RuleContainer {
+	def activeRules: List[Rule]
+	def nonActiveRules: List[Rule] 
+	def rules: Option[List[Rule]]
+	def temporaryRules: Option[List[TemporaryRule]]
+}
+
+class Collect(val name: String, val directory: String, val accountName: String, val providerType: ProviderType, val isActive: Boolean = false) extends RuleContainer {
+	private var _rules: Option[List[Rule]] = None
+	private var _temporaryRules: Option[List[TemporaryRule]] = None
 	
+	private val twitterAdapter = new TwitterCollect(name, directory, accountName)
 	
-	/*
-	Modules related
-	 */
-	def close(): Unit = {
-		isActive = false
-		observableFile.setNone()
-	}
-	
-	/*
-	Rules related
-	 */
-	def initRules(rules: Seq[Rule], temporaryRules: Seq[TemporaryRule]): Unit = {
-		this.rules = Some(rules)
-		this.temporaryRules = Some(temporaryRules)
-	}
-	
-	def activeRules: Seq[Rule] = {
-		rules.getOrElse(List[Rule]()).filter(_.isActive)
-	}
-	
-	def nonActiveRules: Seq[Rule] = {
-		rules.getOrElse(List[Rule]()).filterNot(_.isActive)
-	}
-	
-	def addRule(rule: Rule): Boolean = {
-		if (rules.isDefined) {
-			rules = Some(rules.get :+ rule)
+	// Méthodes d'adaptation entre Rule et SocialMediaRule
+	private def adaptRule(rule: Rule): SocialMediaRule = {
+		providerType match {
+			case ProviderType.Twitter => 
+				new TwitterRule(Option(rule.id.toString), rule.tag, rule.content, rule.collectName, rule.createdAt)
+			case _ => 
+				throw new UnsupportedOperationException(s"Provider ${providerType} not supported")
 		}
-		rules.isDefined
 	}
 	
-	def addRules(rules: Seq[Rule]): Boolean = {
-		if (this.rules.isDefined) {
-			this.rules = Some(this.rules.get ++ rules)
-		}
-		this.rules.isDefined
+	private def adaptRules(rules: List[Rule]): List[SocialMediaRule] = {
+		rules.map(adaptRule)
 	}
 	
-	def removeRules(rules: Seq[Rule]): Boolean = {
-		if (this.rules.isDefined) {
-			this.rules = Some(this.rules.get.filterNot(rule => rules.map(_.id).contains(rule.id)))
+	// Getters pour les propriétés
+	def rules: Option[List[Rule]] = _rules
+	def temporaryRules: Option[List[TemporaryRule]] = _temporaryRules
+	
+	// Méthodes pour les règles  
+	def initRules(rules: List[Rule], temporaryRules: List[TemporaryRule]): Unit = {
+		_rules = Some(rules)
+		_temporaryRules = Some(temporaryRules)
+		
+		if (providerType == ProviderType.Twitter) {
+			val adaptedRules = adaptRules(rules)
+			twitterAdapter.initRules(adaptedRules)
 		}
-		this.rules.isDefined
 	}
 	
-	def addTemporaryRule(rule: TemporaryRule): Boolean = {
-		if (temporaryRules.isDefined) {
-			temporaryRules = Some(temporaryRules.get :+ rule)
-		}
-		temporaryRules.isDefined
+	def activeRules: List[Rule] = {
+		_rules.getOrElse(List.empty).filter(_.active)
 	}
 	
-	def removeTemporaryRules(rules: Seq[TemporaryRule]): Boolean = {
-		if (temporaryRules.isDefined) {
-			temporaryRules = Some(temporaryRules.get.filterNot(rule => rules.map(_.id.get).contains(rule.id.get)))
+	def nonActiveRules: List[Rule] = {
+		_rules.getOrElse(List.empty).filter(!_.active)
+	}
+	
+	def addRule(rule: Rule): Unit = {
+		_rules = Some(_rules.getOrElse(List.empty) ++ List(rule))
+		
+		if (providerType == ProviderType.Twitter && rule.active) {
+			twitterAdapter.addRules(List(adaptRule(rule)))
 		}
-		temporaryRules.isDefined
+	}
+	
+	def removeRules(rules: List[Rule]): Unit = {
+		_rules = Some(_rules.getOrElse(List.empty).filterNot(r => rules.exists(_.id == r.id)))
+		
+		if (providerType == ProviderType.Twitter) {
+			twitterAdapter.removeRules(adaptRules(rules.filter(_.active)))
+		}
+	}
+	
+	def removeTemporaryRules(rules: List[TemporaryRule]): Unit = {
+		_temporaryRules = Some(_temporaryRules.getOrElse(List.empty).filterNot(r => rules.exists(_.id == r.id)))
+	}
+	
+	def setTemporaryRules(rules: List[TemporaryRule]): Unit = {
+		_temporaryRules = Some(rules)
+	}
+	
+	// Pour la compatibilité avec l'ancien code
+	def adaptToSocialCollect: SocialCollect = {
+		providerType match {
+			case ProviderType.Twitter => twitterAdapter
+			case _ => throw new UnsupportedOperationException(s"Provider ${providerType} not supported")
+		}
+	}
+}
+
+// Cette classe représente une règle pour les collectes
+case class Rule(
+	id: Long,
+	tag: String,
+	content: String,
+	collectName: String,
+	createdAt: LocalDateTime = LocalDateTime.now,
+	var active: Boolean = false
+) {
+	def setActive(isActive: Boolean): Unit = {
+		active = isActive
 	}
 }
 

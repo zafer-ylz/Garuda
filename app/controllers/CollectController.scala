@@ -6,7 +6,7 @@ import models.SocialCollect
 import providers.SocialMediaRule
 import models.CollectForm.{CollectData, form => collectForm}
 import models.TemporaryRuleForm.{TemporaryRuleData, form => ruleForm}
-import models.{Rule, TemporaryRule}
+import models.{Collect, Rule, TemporaryRule}
 import play.api.Configuration
 import play.api.data._
 import play.api.mvc._
@@ -42,14 +42,14 @@ class CollectController @Inject()(
 	
 	def seeCollect(collectName: String): Action[AnyContent] = Action.async { implicit request: MessagesRequest[AnyContent] =>
 		val collect = updateRulesOfCollect(collectName)
-		displayCollect(collect)
+		displayCollect(collect.asInstanceOf[Collect])
 	}
 	
 	def startCollect(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
 		val collect = updateRulesOfCollect(collectName)
 		val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 		
-		val collectStarted = account.startCollect(collect.asInstanceOf[models.Collect])
+		val collectStarted = account.startCollect(collect.asInstanceOf[Collect])
 		
 		val flash = {
 			if (collectStarted.isRight) {
@@ -66,7 +66,7 @@ class CollectController @Inject()(
 		val collect = updateRulesOfCollect(collectName)
 		val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 		
-		val collectStopped = account.stopCollect(collect.asInstanceOf[models.Collect])
+		val collectStopped = account.stopCollect(collect.asInstanceOf[Collect])
 		
 		val flash = {
 			if (collectStopped) {
@@ -88,7 +88,6 @@ class CollectController @Inject()(
 			val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 			
 			val rulesToRemove = account.activeRules.filter(rule => rulesIds.contains(rule.id.getOrElse(-1L)))
-				.map(r => new Rule(r.id.map(_.toLong), r.tag, r.content, r.collectName, r.createdAt))
 			
 			account.removeRules(collectName, rulesToRemove)
 			
@@ -106,25 +105,23 @@ class CollectController @Inject()(
 		val newActiveIdTemporaryRules = activeIdRules.filter(_.startsWith("t")).map(_.substring(2).toLong)
 		val newNonActiveIdRules = nonActiveIdRules.filter(_.startsWith("a")).map(_.substring(2).toLong)
 		
-		val collect = updateRulesOfCollect(collectName)
+		val collect = updateRulesOfCollect(collectName).asInstanceOf[Collect]
 		val account = Await.result(accountDao.findByName(collect.accountName), Duration.Inf).get
 		
-		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id.getOrElse(-1L)))
-		val newActiveTemporaryRules = collect.getTemporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
-		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id.getOrElse(-1L)))
+		val newActiveRules = collect.nonActiveRules.filter(rule => newActiveIdRules.contains(rule.id))
+		val newActiveTemporaryRules = collect.temporaryRules.getOrElse(List.empty[TemporaryRule]).filter(rule => newActiveIdTemporaryRules.contains(rule.id.get))
+		val newNonActiveRules = collect.activeRules.filter(rule => newNonActiveIdRules.contains(rule.id))
 		
 		var flashData = Map[String, String]()
 		
 		// Make rules inactive
 		if (newNonActiveRules.nonEmpty) {
-			val rulesToRemove = newNonActiveRules.map(r => new Rule(r.id.map(_.toLong), r.tag, r.content, r.collectName, r.createdAt))
-			val removeRulesResult = account.removeRules(collect.name, rulesToRemove)
+			val removeRulesResult = account.removeRules(collect.name, newNonActiveRules)
 			if (removeRulesResult.isRight) {
 				// Update with DAO
 				for (rule <- newNonActiveRules) {
-					val ruleToUpdate = new Rule(rule.id.map(_.toLong), rule.tag, rule.content, rule.collectName, rule.createdAt)
-					ruleToUpdate.setActive(false)
-					ruleDao.update(rule.id.getOrElse(-1L), ruleToUpdate)
+					rule.setActive(false)
+					ruleDao.update(rule.id, rule)
 				}
 			} else {
 				flashData += "error" -> removeRulesResult.left.getOrElse("")
@@ -136,24 +133,17 @@ class CollectController @Inject()(
 			val maxRuleLength = account.getMaxRuleLength
 			val filteredNewActiveTemporaryRules = newActiveTemporaryRules.filter(rule => rule.content.length <= maxRuleLength)
 			val filteredNewActiveRules = newActiveRules.filter(rule => rule.content.length <= maxRuleLength)
-			                                  .map(r => new Rule(r.id.map(_.toLong), r.tag, r.content, r.collectName, r.createdAt))
 			
 			val addRulesResult = account.addRules(collectName, filteredNewActiveTemporaryRules, filteredNewActiveRules)
 			if (addRulesResult.isRight) {
-				collect.removeTemporaryRulesFromList(filteredNewActiveTemporaryRules)
-				collect.removeRules(filteredNewActiveRules.map(r => 
-					new providers.twitter.TwitterRule(r.id.map(_.toString), r.tag, r.content, r.collect, r.createdAt)))
+				collect.removeTemporaryRules(filteredNewActiveTemporaryRules)
+				collect.removeRules(filteredNewActiveRules)
 				
 				val rulesFromResult = addRulesResult.getOrElse(Seq.empty[Rule])
 				
-				val socialMediaRules = rulesFromResult.map(r => 
-					new providers.twitter.TwitterRule(Option(r.id.toString), r.tag, r.content, r.collect, r.createdAt))
-				
-				collect.addRules(socialMediaRules)
-				
 				// Update with DAO
 				temporaryRulesDao.batchDelete(filteredNewActiveTemporaryRules.map(_.id.get))
-				ruleDao.batchDelete(filteredNewActiveRules.map(_.id.getOrElse(-1L)))
+				ruleDao.batchDelete(filteredNewActiveRules.map(_.id))
 				ruleDao.batchInsert(rulesFromResult)
 				
 				// Inform user that some rules have not been added due to size incompatibility
@@ -217,27 +207,24 @@ class CollectController @Inject()(
 		Redirect(routes.CollectController.listCollects).flashing(flash)
 	}
 	
-	private def updateRulesOfCollect(collectName: String): SocialCollect = {
+	private def updateRulesOfCollect(collectName: String): Collect = {
 		val collect = Await.result(collectDao.findByName(collectName), Duration.Inf).get
 		// Populate rules if not already done
 		if (collect.rules.isEmpty) {
 			// Retrieve the rules of the collect
 			Await.result(ruleDao.findByCollectName(collectName).map { rules =>
 				temporaryRulesDao.findByCollectName(collectName).map { temporaryRules =>
-					collect.initRules(rules.map(r => 
-						new providers.twitter.TwitterRule(Option(r.id.toString), r.tag, r.content, r.collect, r.createdAt)
-					))
-					collect.setTemporaryRules(temporaryRules)
+					collect.initRules(rules, temporaryRules)
 				}
 			}, Duration.Inf)
 			// Update the rules of the account
 			Await.result(accountDao.findByName(collect.accountName).map {
 				case Some(account) => {
 					account.initRules(collect.name)
-					if (account.getActiveRules.nonEmpty) {
+					if (account.activeRules.nonEmpty) {
 						// Based on the rules of account, set to non-active the rules that are not
-						val activeIds = account.getActiveRules.map(_.id.getOrElse("-1").toLong)
-						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id.getOrElse(-1L))))
+						val activeIds = account.activeRules.map(_.id)
+						collect.rules.get.foreach(rule => rule.setActive(activeIds.contains(rule.id)))
 					}
 				}
 				case None => {}
@@ -246,11 +233,17 @@ class CollectController @Inject()(
 		collect
 	}
 	
-	private def displayCollect(collect: SocialCollect, flash: Flash = new Flash(Map())): Future[Result] = {
+	def createRule(collectName: String): Action[AnyContent] = Action { implicit request: MessagesRequest[AnyContent] =>
+		// Code à implémenter pour créer une règle
+		Redirect(routes.CollectController.seeCollect(collectName))
+	}
+	
+	private def displayCollect(collect: Collect, flash: Flash = new Flash(Map())): Future[Result] = {
 		accountDao.all().map { accounts =>
 			accountDao.findByName(collect.accountName).map {
 				case Some(account) => {
-					val token = CSRF.getToken.get
+					implicit val request = Request(FakeRequest(), "")
+					val token = CSRF.getToken(request).get
 					Ok(views.html.seeCollect(collect, account, accounts, ruleForm, postUrlCreateRule(collect.name),
 						postUrlAffectRules(collect.name), postRemoveAccountRulesUrl(collect.name), token.value)).flashing(flash)
 				}

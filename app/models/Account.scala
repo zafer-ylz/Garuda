@@ -1,114 +1,119 @@
 package models
 
-import twitter.{TweetStreamListener, TwitterConnection}
+import providers.{ProviderType, SocialMediaRule, StreamingConnection}
+import org.joda.time.DateTime
+import models.twitter.{TwitterAccount, TwitterCollect}
+import java.time.LocalDateTime
 
+/**
+ * Cette classe est maintenue pour des raisons de compatibilité avec l'ancien code.
+ * Utiliser SocialAccount à la place pour les nouveaux développements.
+ */
 case class Account(name: String, accountType: AccountType, bearerToken: String) {
-	var rules: Option[Seq[Rule]] = None
-	val twitterConnection = new TwitterConnection(this)
-	var currentActiveCollect: Option[TweetStreamListener] = None
+	private var rules: Option[Seq[Rule]] = None
 	
-	var rateFilteredStreamConnecting: Int = accountType.rateFilteredStreamConnecting
-	var rateFilteredStreamAddingOrDeletingFilters: Int = accountType.rateFilteredStreamAddingOrDeletingFilters
-	var rateFilteredStreamListingFilters: Int = accountType.rateFilteredStreamListingFilters
+	private var twitterAccountAdapter: Option[TwitterAccount] = None
 	
-	def resetRates(): Unit = {
-		rateFilteredStreamConnecting = accountType.rateFilteredStreamConnecting
-		rateFilteredStreamAddingOrDeletingFilters = accountType.rateFilteredStreamAddingOrDeletingFilters
-		rateFilteredStreamListingFilters = accountType.rateFilteredStreamListingFilters
-	}
-	
-	def isCurrentActiveCollect(collect: Collect): Boolean = {
-		currentActiveCollect.isDefined && currentActiveCollect.get.collect.name == collect.name
-	}
-	
-	def startCollect(collect: Collect): Either[String, TweetStreamListener] = {
-		if (currentActiveCollect.isEmpty) {
-			val result = twitterConnection.startCollect(collect)
-			if (result.isRight) {
-				currentActiveCollect = Some(result.toOption.get)
-			}
-			result
-		} else {
-			Left(s"The collect ${currentActiveCollect.get.collect.name} is already active.")
+	private def getTwitterAccount(): TwitterAccount = {
+		if (twitterAccountAdapter.isEmpty) {
+			twitterAccountAdapter = Some(TwitterAccount(name, accountType, bearerToken))
 		}
+		twitterAccountAdapter.get
+	}
+	
+	// Méthode pour adapter SocialMediaRule à Rule
+	private def adaptRule(rule: SocialMediaRule): Rule = {
+		val id = rule.id.map(_.toLong).getOrElse(-1L)
+		val newRule = new Rule(id, rule.tag, rule.content, rule.collectName)
+		newRule.setActive(rule.isActive)
+		newRule
+	}
+	
+	// Méthode pour adapter Rule à SocialMediaRule
+	private def adaptToSocialMediaRule(rule: Rule): SocialMediaRule = {
+		new providers.twitter.TwitterRule(
+			Option(rule.id.toString), 
+			rule.tag, 
+			rule.content, 
+			rule.collectName, 
+			convertToJodaDateTime(rule.createdAt)
+		)
+	}
+	
+	// Conversion de LocalDateTime à DateTime pour la compatibilité
+	private def convertToJodaDateTime(localDateTime: LocalDateTime): DateTime = {
+		new DateTime(
+			localDateTime.getYear,
+			localDateTime.getMonthValue,
+			localDateTime.getDayOfMonth,
+			localDateTime.getHour,
+			localDateTime.getMinute,
+			localDateTime.getSecond
+		)
+	}
+	
+	// Méthodes pour maintenir la compatibilité avec l'ancien code
+	def isCurrentActiveCollect(collect: Collect): Boolean = {
+		getTwitterAccount().isCurrentActiveCollect(collect.adaptToSocialCollect)
+	}
+	
+	def startCollect(collect: Collect): Either[String, StreamingConnection] = {
+		getTwitterAccount().startCollect(collect.adaptToSocialCollect)
 	}
 	
 	def stopCollect(collect: Collect): Boolean = {
-		if (currentActiveCollect.isDefined && currentActiveCollect.get.collect.name == collect.name) {
-			currentActiveCollect.get.shutdown()
-			currentActiveCollect = None
-			collect.close()
-			true
-		} else {
-			false
-		}
+		getTwitterAccount().stopCollect(collect.adaptToSocialCollect)
 	}
 	
-	/**
-	 * Initialize this account active rules. Contact the Twitter API only if it was not already done.
-	 *
-	 * @param collectName the collect linked to these rules
-	 * @return the current set of active rules (right), or, if there was a problem with the Twitter API,
-	 *         the String containing the detail of the problem
-	 */
 	def initRules(collectName: String): Either[String, Seq[Rule]] = {
-		if (rules.isEmpty) {
-			retrieveActiveRules(collectName)
-		} else {
-			// The rules have already been retrieved, do not contact the Twitter API
-			Right(rules.get)
-		}
+		getTwitterAccount().initRules(collectName).map(rules => rules.map(adaptRule))
 	}
 	
-	/**
-	 * Retrieve this account active rules from the Twitter API.
-	 *
-	 * @param collectName the collect linked to these rules
-	 * @return the current set of active rules (right), or, if there was a problem with the Twitter API,
-	 *         the String containing the detail of the problem
-	 */
 	def retrieveActiveRules(collectName: String): Either[String, Seq[Rule]] = {
-		// The rules have not yet be retrieved
-		val activeRules = twitterConnection.getAllRules(collectName)
-		if (activeRules.isRight) {
-			// The rules have been correctly retrieved
-			rules = Some(activeRules.getOrElse(Seq[Rule]()))
-			Right(rules.get)
-		} else {
-			// There was a problem with the Twitter API
-			Left(activeRules.left.getOrElse("Problem with Twitter API"))
-		}
+		getTwitterAccount().retrieveActiveRules(collectName).map(rules => rules.map(adaptRule))
 	}
 	
-	/**
-	 * Add the rules to the current Twitter API instance.
-	 *
-	 * @param collecteName the collect linked to the rules
-	 * @param temporaryRules the temporary rules to add
-	 * @param rules the rules to add
-	 * @return the current set of active rules (right), or, if there was a problem with the Twitter API,
-	 *         the String containing the detail of the problem
-	 */
-	def addRules(collecteName: String, temporaryRules: Seq[TemporaryRule], rules: Seq[Rule]): Either[String, Seq[Rule]] = {
-		val addedRules = twitterConnection.addRules(collecteName, temporaryRules, rules)
-		if (addedRules.isRight) {
-			// If the rules have been correctly updated, update the account rules
-			this.rules = Some(addedRules.getOrElse(Seq[Rule]()))
-		}
-		addedRules
+	def addRules(collectName: String, temporaryRules: Seq[TemporaryRule], rules: Seq[Rule]): Either[String, Seq[Rule]] = {
+		val socialMediaRules = rules.map(adaptToSocialMediaRule)
+		getTwitterAccount().addRules(collectName, socialMediaRules).map(rules => rules.map(adaptRule))
 	}
 	
-	/**
-	 * Delete the rules to the current Twitter API instance.
-	 *
-	 * @param rules the rules to delete
-	 * @return the current set of active rules (right), or, if there was a problem with the Twitter API,
-	 *         the String containing the detail of the problem
-	 */
 	def removeRules(collectName: String, rules: Seq[Rule]): Either[String, Seq[Rule]] = {
-		twitterConnection.removeRules(rules)
-		retrieveActiveRules(collectName)
+		val socialMediaRules = rules.map(adaptToSocialMediaRule)
+		getTwitterAccount().removeRules(collectName, socialMediaRules).map(rules => rules.map(adaptRule))
 	}
+	
+	// Méthodes d'accès pour la compatibilité
+	def activeRules: Seq[Rule] = {
+		getTwitterAccount().getActiveRules.map(adaptRule)
+	}
+	
+	def maxRuleLength: Int = {
+		getTwitterAccount().getMaxRuleLength
+	}
+	
+	def getProviderType: ProviderType = {
+		ProviderType.Twitter
+	}
+	
+	def getMaxRuleLength: Int = {
+		maxRuleLength
+	}
+}
+
+/**
+ * Extension de la classe Rule pour ajouter la méthode setActive
+ */
+class RuleWithActive(id: Long, tag: String, content: String, collect: String, createdAt: DateTime = DateTime.now()) 
+	extends Rule(id, tag, content, collect, createdAt) {
+	
+	private var _isActive: Boolean = false
+	
+	def setActive(active: Boolean): Unit = {
+		_isActive = active
+	}
+	
+	def isActive: Boolean = _isActive
 }
 
 object AccountForm {

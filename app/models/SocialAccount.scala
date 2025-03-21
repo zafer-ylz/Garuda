@@ -50,12 +50,12 @@ trait SocialAccount {
   /**
    * Démarre une collecte sur ce compte
    */
-  def startCollect(collect: SocialCollect): Either[String, StreamingConnection]
+  def startCollect(collect: Collect): Either[String, StreamingConnection]
   
   /**
    * Arrête une collecte sur ce compte
    */
-  def stopCollect(collect: SocialCollect): Boolean
+  def stopCollect(collect: Collect): Boolean
   
   /**
    * Initialise les règles pour ce compte. Contacte l'API uniquement si les règles n'ont pas déjà été récupérées.
@@ -70,12 +70,12 @@ trait SocialAccount {
   /**
    * Ajoute des règles pour ce compte
    */
-  def addRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]]
+  def addRules(collectName: String, temporaryRules: List[TemporaryRule], rules: List[Rule]): Either[String, Seq[Rule]]
   
   /**
    * Supprime des règles pour ce compte
    */
-  def removeRules(collectName: String, rules: Seq[SocialMediaRule]): Either[String, Seq[SocialMediaRule]]
+  def removeRules(collectName: String, rules: List[Rule]): Either[String, Seq[Rule]]
   
   /**
    * Annule les opérations en cours
@@ -85,7 +85,7 @@ trait SocialAccount {
   /**
    * Obtient les règles actives
    */
-  def getActiveRules: Seq[SocialMediaRule] = Seq.empty
+  def activeRules: List[Rule] = List.empty
   
   /**
    * Obtient le type de provider

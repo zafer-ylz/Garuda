@@ -1,8 +1,8 @@
 package models
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
-case class TemporaryRule(id: Option[Long], tag: String, content: String, collect: String, createdAt: DateTime = DateTime.now())
+case class TemporaryRule(id: Option[Long], tag: String, content: String, collectName: String, createdAt: LocalDateTime = LocalDateTime.now())
 
 object TemporaryRuleForm {
 	

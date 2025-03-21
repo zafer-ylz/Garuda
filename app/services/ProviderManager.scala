@@ -1,7 +1,7 @@
 package services
 
 import javax.inject.{Inject, Singleton}
-import models.{SocialAccount, SocialCollect}
+import models.{SocialAccount, SocialCollect, Collect}
 import providers.{ProviderType, SocialMediaRule}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,17 +23,17 @@ class ProviderManager @Inject()(implicit executionContext: ExecutionContext) {
   }
   
   /**
-   * Crée une instance de SocialCollect en fonction du type de provider
+   * Crée une collecte pour le provider spécifié.
+   * 
+   * @param name Nom de la collecte
+   * @param directory Répertoire de stockage des données
+   * @param accountName Nom du compte associé
+   * @param providerType Type de provider
+   * @return Une instance de Collect configurée pour le provider spécifié
    */
-  def createCollect(name: String, directory: String, accountName: String, providerType: ProviderType): SocialCollect = {
-    providerType match {
-      case ProviderType.Twitter =>
-        new TwitterCollect(name, directory, accountName)
-      case ProviderType.Bluesky =>
-        new BlueskyCollect(name, directory, accountName)
-      case _ =>
-        throw new IllegalArgumentException(s"Provider type $providerType not supported")
-    }
+  def createCollect(name: String, directory: String, accountName: String, providerType: ProviderType): Collect = {
+    // Crée une instance de la nouvelle classe Collect avec le provider approprié
+    new Collect(name, directory, accountName, providerType)
   }
   
   /**
@@ -69,5 +69,19 @@ class ProviderManager @Inject()(implicit executionContext: ExecutionContext) {
    */
   def validateRule(rule: SocialMediaRule, providerType: ProviderType): Boolean = {
     rule.providerType == providerType
+  }
+  
+  /**
+   * Vérifie si un provider est supporté
+   * 
+   * @param provider Type de provider à vérifier
+   * @return true si le provider est supporté, false sinon
+   */
+  def isProviderSupported(provider: ProviderType): Boolean = {
+    provider match {
+      case ProviderType.Twitter => true
+      case ProviderType.Bluesky => true
+      case _ => false
+    }
   }
 } 
